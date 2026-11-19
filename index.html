@@ -113,7 +113,7 @@
       <div class="sec">Speech</div>
       <div class="form-group">
         <label class="form-row"><span>Speech recognition language</span><select id="srLang"><option value="en-IN" selected>English (India)</option><option value="en-GB">English (UK)</option><option value="en-US">English (US)</option></select></label>
-        <label class="form-row"><span>Weight of a minor read-aloud error (still to be agreed)</span><select id="minorW"><option value="0.5" selected>Half an error (0.5)</option><option value="0.25">A quarter (0.25)</option><option value="1">Same as an error (1)</option></select></label>
+        <input type="hidden" id="minorW" value="0.5">
       </div>
       <p class="note">Chrome and Edge send the audio to Google's or Microsoft's speech service. Firefox doesn't support speech recognition. Open the page over https (for example on Vercel) so the browser allows the microphone.</p>
     </div>
