@@ -1134,3 +1134,6 @@ audio{width:100%;height:42px}
 
 /* keep the task bar's selected tab clear of the bar's rounded ends */
 @media (min-width:901px){.sidebar{padding-left:52px;padding-right:52px}}
+
+/* no "Space" label under the record button */
+.recorder .rec-key{display:none !important}
