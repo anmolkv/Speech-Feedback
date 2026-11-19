@@ -259,30 +259,47 @@
   observe($("sPromptBox"), wrapWords);
   wrapWords();
 
-  let lastNext = -1;
+  // Follow-along highlight. Both the passage and what was heard go through the scorer's tokenizer
+  // (so "8:45" = "eight forty five", "don't" = "do not"), then each heard word is matched to the
+  // next few passage words allowing close-but-not-exact recognitions ("registration"/"registrations").
+  let lastNext = -1, best = 0, ref = null, refFor = null;
+  const norm = w => w.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const toks = t => (typeof tokenize === "function" ? tokenize(t).map(x => x.w) : t.split(/\s+/).map(norm)).filter(Boolean);
+  const close = (h, r) => {
+    if (h === r) return true;
+    if (typeof sim !== "function") return false;
+    if (r.length <= 3 || h.length <= 3) return h.length > 1 && r.length > 1 && sim(h, r) >= 0.67 && h[0] === r[0];
+    if (sim(h, r) >= 0.72) return true;
+    if (typeof phonKey === "function" && phonKey(h) === phonKey(r)) return true;
+    return h.slice(0, 4) === r.slice(0, 4) && sim(h, r) >= 0.55;
+  };
+  function buildRef(p) {
+    ref = []; refFor = p;
+    p.querySelectorAll(".w").forEach((span, si) => toks(span.textContent).forEach(w => ref.push({ w, si })));
+  }
   function track() {
     const p = passageEl(); if (!p) return;
+    if (refFor !== p) buildRef(p);
     const live = $("live"), on = recBtn?.classList.contains("on");
-    const said = live && !live.querySelector(":scope > .sub") ? (live.textContent.match(/[A-Za-z0-9'’:-]+/g) || []) : [];
+    const heard = live && !live.querySelector(":scope > .sub") ? toks(live.textContent) : [];
     const ws = p.querySelectorAll(".w");
     p.classList.toggle("tracking", !!on);
-    if (!on) { ws.forEach(w => w.classList.remove("said", "next")); lastNext = -1; return; }
-    // Line up what was heard with the passage: each heard word may match one of the next few
-    // passage words, so a misread or "eight forty five" for "8:45" doesn't push the marker off.
-    const norm = w => w.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const ref = [...ws].map(w => norm(w.textContent));
+    if (!on) { ws.forEach(w => w.classList.remove("said", "next")); lastNext = -1; best = 0; return; }
     let n = 0;
-    said.forEach(sw => {
-      const h = norm(sw); if (!h) return;
-      for (let k = 0; k < 6 && n + k < ref.length; k++) if (ref[n + k] === h) { n = n + k + 1; break; }
+    heard.forEach(h => {
+      for (let k = 0; k < 8 && n + k < ref.length; k++) if (close(h, ref[n + k].w)) { n = n + k + 1; break; }
     });
-    ws.forEach((w, i) => { w.classList.toggle("said", i < n); w.classList.toggle("next", i === n); });
+    best = Math.max(best, n);                       // never jump backwards while interim words settle
+    const nextSpan = best < ref.length ? ref[best].si : ws.length;
+    ws.forEach((w, i) => { w.classList.toggle("said", i < nextSpan); w.classList.toggle("next", i === nextSpan); });
     // keep the current line on screen, above the pinned dock
-    if (n !== lastNext && ws[n] && speakPane) {
-      lastNext = n;
-      const r = ws[n].getBoundingClientRect(), dock = $("recDock").getBoundingClientRect();
-      const top = Math.max(speakPane.getBoundingClientRect().top, 0);
-      if (r.bottom > dock.top - 24 || r.top < top + 16) ws[n].scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
+    if (nextSpan !== lastNext && ws[nextSpan]) {
+      lastNext = nextSpan;
+      const card = p.closest(".passage-card");
+      if (card && card.scrollHeight > card.clientHeight) {
+        const r = ws[nextSpan].getBoundingClientRect(), c = card.getBoundingClientRect();
+        if (r.bottom > c.bottom - 16 || r.top < c.top + 16) card.scrollBy({ top: r.top - c.top - c.height / 3, behavior: reduced ? "auto" : "smooth" });
+      }
     }
   }
   observe($("live"), track, { childList: true, characterData: true, subtree: true });
