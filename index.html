@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Speak Feedback</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="splash" id="splash" aria-hidden="true">
+  <div class="splash-inner">
+    <div class="splash-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h9M4 12h6M4 17h9"/><path d="M17 8v8M20 10v4M14 10.5v3"/></svg></div>
+    <h2>Speak</h2>
+    <p>Your practice space is getting ready</p>
+    <div class="dots"><i></i><i></i><i></i></div>
+  </div>
+</div>
+
+<header class="toolbar">
+  <div class="tb-left"><div class="sb-prog" id="sDone"><span class="track"><i></i></span><em>0 of 4 done</em></div></div>
+  <div class="brand">
+    <div class="app-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h9M4 12h6M4 17h9"/><path d="M17 8v8M20 10v4M14 10.5v3"/></svg></div>
+    <h1>Feedback<small>Speaking practice</small></h1>
+  </div>
+  <div class="tools">
+    <button class="icon-btn corner-btn" id="settingsBtn" type="button" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    <div class="engine" id="engine" title="Grammar engine"><i></i><span>Grammar: not checked</span></div>
+    <div class="engine" id="srEngine" title="Speech engine"><i></i><span>Speech: checking…</span></div>
+  </div>
+</header>
+
+
+<main id="speakView" class="app">
+  <aside class="sidebar">
+    <div class="bar-bg" aria-hidden="true"></div>
+    <div class="sb-head">Speaking tasks</div>
+    <div class="tabs" id="sTabs"></div>
+    <div class="sb-foot">Speech is turned into text by your browser. Read-aloud scoring follows the Read-Aloud Scoring Rules.</div>
+  </aside>
+
+  <section class="pane editor card">
+    <div class="pane-head"><button class="fb-open" id="fbOpen" type="button">View feedback</button><div class="crumb">Communication skills · Speaking</div><h2 id="sTitle">Read aloud</h2></div>
+    <div class="pane-body">
+      <div id="sPromptBox"></div>
+
+      <div class="live" id="live" aria-live="polite"><span class="sub">What you say will appear here as you speak.</span></div>
+      <div class="sub" id="recStatus"></div>
+
+      <!-- Recording dock: stays pinned to the bottom of the screen, so the passage never has to scroll away -->
+      <div class="recorder" id="recDock">
+        <div class="rec-info">
+          <span class="rec-label" id="recLabel">Read the passage aloud</span>
+          <span class="timer" id="recTimer">0:00</span>
+        </div>
+        <canvas class="wave" id="wave" aria-hidden="true"></canvas>
+        <div class="meter"><span id="recMeter"></span></div>
+        <div class="rec-action">
+          <button class="recbtn" id="recBtn" type="button" aria-keyshortcuts="Space"><i></i><span>Start recording</span></button>
+          <kbd class="rec-key">Space</kbd>
+        </div>
+        <button class="type-btn" id="typeBtn" type="button" title="No microphone? Type what was said" aria-label="No microphone? Type what was said"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M6 9.5h.01M9.5 9.5h.01M13 9.5h.01M16.5 9.5h.01M6 13h.01M18 13h.01M9 15.5h6"/></svg><span>Type</span></button>
+      </div>
+
+
+      <div class="rubric" id="sRubricInfo"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Feedback: opens as a large pop-up once a recording has been scored -->
+<div class="fb-modal" id="fbModal" aria-hidden="true">
+  <section class="pane inspector card fb-dialog" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
+    <div class="pane-head fb-head">
+      <div><div class="crumb">Your feedback</div><h2 id="fbTitle">Feedback</h2></div>
+      <div class="fb-actions">
+        <button class="ghost" id="fbRetry" type="button">Try again</button>
+        <button class="primary" id="fbNext" type="button">Next task →</button>
+        <button class="fb-close" id="fbClose" type="button" aria-label="Close feedback" title="Close (Esc)">×</button>
+      </div>
+    </div>
+    <div class="pane-body"><div id="sOut"><div class="empty">Record yourself, then press Stop.<br>Your feedback will appear here.</div></div></div>
+  </section>
+</div>
+
+<!-- No microphone: type the transcript instead (opens from the keyboard button in the recorder) -->
+<div class="type-modal" id="manualBox" aria-hidden="true">
+  <div class="type-card" role="dialog" aria-modal="true" aria-labelledby="typeTitle">
+    <div class="type-head"><div><div class="crumb">No microphone?</div><h3 id="typeTitle">Type what was said</h3></div>
+      <button class="fb-close" id="typeClose" type="button" aria-label="Close">×</button></div>
+    <label>Transcript (exactly what the learner said)
+      <textarea id="manualText" placeholder="e.g. Ananya reached the institute gate at eight forty five…"></textarea></label>
+    <label>Time taken in seconds (optional, needed to score pace)
+      <input id="manualSecs" type="number" min="0" placeholder="e.g. 32"></label>
+    <div class="type-actions"><button class="ghost" id="manualSample" type="button">Fill a sample</button><button class="primary" id="manualGo" type="button">Score transcript</button></div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="settingsSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-head"><h3 id="sheetTitle">Settings</h3><button class="link-btn" id="settingsDone" type="button">Done</button></div>
+    <div class="sheet-body">
+      <div class="sec">Grammar (spoken answers)</div>
+      <!-- Grammar server address: hidden from learners. To use your own LanguageTool server, change this value. -->
+      <input type="hidden" id="ltUrl" value="https://api.languagetool.org/v2/check">
+      <div class="form-group">
+        <label class="form-row"><span>English variety</span><select id="ltLang"><option value="en-GB" selected>British English (closest to Indian English)</option><option value="en-US">American English</option></select></label>
+      </div>
+      <p class="note">Grammar is checked online. If it can't be reached, the tool uses basic offline checks.</p>
+
+      <div class="sec">Speech</div>
+      <div class="form-group">
+        <label class="form-row"><span>Speech recognition language</span><select id="srLang"><option value="en-IN" selected>English (India)</option><option value="en-GB">English (UK)</option><option value="en-US">English (US)</option></select></label>
+        <label class="form-row"><span>Weight of a minor read-aloud error (still to be agreed)</span><select id="minorW"><option value="0.5" selected>Half an error (0.5)</option><option value="0.25">A quarter (0.25)</option><option value="1">Same as an error (1)</option></select></label>
+      </div>
+      <p class="note">Chrome and Edge send the audio to Google's or Microsoft's speech service. Firefox doesn't support speech recognition. Open the page over https (for example on Vercel) so the browser allows the microphone.</p>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script src="motion.js"></script>
+<script src="notch.js"></script>
+</body>
+</html>
