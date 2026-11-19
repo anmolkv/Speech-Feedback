@@ -658,8 +658,8 @@ audio{width:100%;height:42px}
 
 /* ---- Shared card header: dark tag + quiet meta ---- */
 .card-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
-.tag{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:#fff;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:7px 14px 7px 12px;border-radius:999px}
-.tag::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,#6f9bff)}
+.card-top .tag,.coach-head .tag{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:#fff;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:7px 14px 7px 12px;border-radius:999px}
+.card-top .tag::before,.coach-head .tag::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,#6f9bff)}
 .card-top .meta{font-size:13px;font-weight:600;color:var(--muted)}
 
 /* ---- Passage: clean white card, no notebook lines ---- */
@@ -1131,3 +1131,6 @@ audio{width:100%;height:42px}
   .recorder .rec-action{top:-18px}
   .recorder .wave{width:56px}
 }
+
+/* keep the task bar's selected tab clear of the bar's rounded ends */
+@media (min-width:901px){.sidebar{padding-left:52px;padding-right:52px}}
