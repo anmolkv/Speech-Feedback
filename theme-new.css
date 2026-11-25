@@ -1,0 +1,210 @@
+/* =========================================================
+   Theme: Learning Modules — Design System (Figma "Foundations")
+   Active when <html data-theme="new">. The Classic theme
+   (style.css on its own) is untouched.
+   Two ramps: Blue = the one thing to do next, Neutral = everything else.
+   ========================================================= */
+
+/* ---------- Primitives (always available) ---------- */
+:root{
+  --blue-50:#E8EDFF; --blue-100:#DDE7FF; --blue-400:#4D7DFF;
+  --blue-600:#2B4FD8; --blue-700:#3557C5; --blue-900:#1E3A8A;
+  --neutral-0:#FFFFFF; --neutral-25:#F7F8FA; --neutral-50:#F3F4F6; --neutral-100:#EEF0F4;
+  --neutral-150:#E7E9EE; --neutral-200:#E3E6EB; --neutral-300:#D9DCE2; --neutral-350:#C9CCD3;
+  --neutral-400:#A4A9B4; --neutral-500:#8B909C; --neutral-600:#6A7080; --neutral-700:#3D4250;
+  --neutral-800:#1D1F25; --neutral-900:#16181D; --neutral-950:#0D0F14; --neutral-1000:#000000;
+}
+
+/* ---------- Shared Learning Modules tokens (options 2, 3, 4) ---------- */
+html.lm{
+  /* type families */
+  --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;  /* practice / tool UI */
+  --font-display:"Outfit","Inter",system-ui,sans-serif;                                     /* lesson UI & display */
+  --font-reading:"Lexend","Inter",system-ui,sans-serif;                                     /* reading surfaces */
+  --font-reading-title:"Bricolage Grotesque","Outfit",system-ui,sans-serif;
+  --font-num:"Chakra Petch","Inter",system-ui,sans-serif;                                   /* numbers & timers */
+
+  /* bg */
+  --bg:var(--neutral-50); --card:var(--neutral-0);
+  --surface:var(--neutral-0); --surface-solid:var(--neutral-0);
+  --soft-2:var(--neutral-25); --soft:var(--neutral-100);
+  --fill:var(--neutral-50); --fill2:var(--neutral-100); --fill3:var(--neutral-300);
+
+  /* text */
+  --text:var(--neutral-900); --ink:var(--neutral-950); --muted:var(--neutral-600);
+  --tertiary:var(--neutral-400); --on-accent:var(--neutral-0);
+  --icon:var(--neutral-900); --icon-inverse:var(--neutral-0);
+
+  /* border */
+  --line:var(--neutral-150); --line-strong:var(--neutral-350);
+
+  /* accent (blue) — overridden per option */
+  --accent:var(--blue-600); --accent-hover:var(--blue-700); --accent-edge:var(--blue-900);
+  --accent-soft:var(--blue-50); --accent-ring:rgba(43,79,216,.22); --sel:var(--blue-100);
+  --accent-text:var(--blue-700); --rule:var(--blue-100);
+  --green:var(--accent); --green-soft:var(--accent-soft); --green-dot:var(--accent);
+
+  /* elevation & tactile */
+  --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 10px 28px -14px rgba(16,24,40,.16);
+  --shadow-float:0 1px 3px rgba(16,24,40,.12),0 28px 48px -28px rgba(16,24,40,.6);
+  --shadow-lg:0 30px 70px -20px rgba(0,0,0,.35);
+  --tactile-light:0 4px 0 #C9CDD5;
+
+  /* spacing (4-pt, 14px gutter) & radius */
+  --sp-2xs:4px; --sp-xs:8px; --sp-sm:12px; --gutter:14px; --sp-md:16px; --sp-lg:20px;
+  --sp-xl:24px; --sp-2xl:32px; --sp-3xl:48px; --sp-4xl:64px;
+  --r-xs:4px; --r-sm:10px; --r:14px; --r-lg:22px; --r-xl:28px; --r-full:999px;
+}
+
+/* ---------- Option 2 · Navy (near-black navy instead of black, navy buttons) ---------- */
+html[data-theme="navy"]{
+  --frame:#0E1A40; --inverse:#0E1A40; --dark-edge:#060C22;
+  --chrome:#1C2A5A; --chrome-hover:#28386E; --chrome-ring:#28386E;
+  --chrome-text:#C3CBE6; --chrome-muted:#8E99C0; --chrome-muted-2:#8E99C0;
+  --cta-bg:#0E1A40; --cta-hover:#1C2A5A; --cta-edge:#060C22; --cta-glow:0 14px 26px -14px rgba(6,12,34,.6);
+  --hero-bg:#0E1A40; --hero-hover:#1C2A5A; --hero-edge:#060C22; --hero-glow:0 14px 26px -14px rgba(6,12,34,.6);
+  --rec-bg:#0E1A40; --rec-hover:#1C2A5A; --rec-edge:#060C22; --rec-ring:#fff; --rec-glow:0 12px 24px -8px rgba(6,12,34,.6);
+}
+
+/* ---------- Option 3 · Blue & Black (Figma "Brand & CTA" exactly) ---------- */
+html[data-theme="brand"]{
+  --frame:#000000; --inverse:#1D1F25; --dark-edge:#000000;
+  --chrome:#1D1F25; --chrome-hover:#3D4250; --chrome-ring:#3D4250;
+  --chrome-text:#C9CCD3; --chrome-muted:#8B909C; --chrome-muted-2:#8B909C;
+  /* Blue CTA: Next, Submit, View feedback */
+  --cta-bg:#2B4FD8; --cta-hover:#3557C5; --cta-edge:#1E3A8A; --cta-glow:0 0 0 transparent;
+  /* Black CTA: hero "Continue lesson" / Start task */
+  --hero-bg:#1D1F25; --hero-hover:#3D4250; --hero-edge:#000000; --hero-glow:0 22px 34px -18px rgba(0,0,0,.55);
+  /* record = blue with Glow/record */
+  --rec-bg:#2B4FD8; --rec-hover:#3557C5; --rec-edge:#1E3A8A; --rec-ring:transparent; --rec-glow:0 12px 24px -8px rgba(43,79,216,.55);
+}
+
+/* ---------- Option 4: Snigdha's "try this" — sky/700 #11577E replaces black (frame, dark surfaces, buttons) ---------- */
+html[data-theme="sky"]{
+  --frame:#11577E; --inverse:#11577E; --dark-edge:#093A55;
+  --chrome:#1B6A95; --chrome-hover:#2479A6; --chrome-ring:#2479A6;
+  --chrome-text:#D3EEFA; --chrome-muted:#A9DCF8; --chrome-muted-2:#A9DCF8;
+  --cta-bg:#11577E; --cta-hover:#1B6A95; --cta-edge:#093A55; --cta-glow:0 14px 26px -14px rgba(9,58,85,.6);
+  --hero-bg:#11577E; --hero-hover:#1B6A95; --hero-edge:#093A55; --hero-glow:0 14px 26px -14px rgba(9,58,85,.6);
+  --rec-bg:#11577E; --rec-hover:#1B6A95; --rec-edge:#093A55; --rec-ring:#fff; --rec-glow:0 12px 24px -8px rgba(9,58,85,.6);
+}
+
+/* ---------- Option 5: Snigdha's "try this" — purple/600 #8A4FB0 replaces black (frame, dark surfaces, buttons) ---------- */
+html[data-theme="purple"]{
+  --frame:#8A4FB0; --inverse:#8A4FB0; --dark-edge:#3E3A8E;
+  --chrome:#9A62BF; --chrome-hover:#A874C9; --chrome-ring:#A874C9;
+  --chrome-text:#F4EAF8; --chrome-muted:#F3D3F6; --chrome-muted-2:#F3D3F6;
+  --cta-bg:#8A4FB0; --cta-hover:#9A62BF; --cta-edge:#3E3A8E; --cta-glow:0 14px 26px -14px rgba(62,58,142,.55);
+  --hero-bg:#8A4FB0; --hero-hover:#9A62BF; --hero-edge:#3E3A8E; --hero-glow:0 14px 26px -14px rgba(62,58,142,.55);
+  --rec-bg:#8A4FB0; --rec-hover:#9A62BF; --rec-edge:#3E3A8E; --rec-ring:#fff; --rec-glow:0 12px 24px -8px rgba(62,58,142,.55);
+}
+
+/* ---------- Option 6: Snigdha's "try this" — green/700 (feedback/success) #136C3E replaces black (frame, dark surfaces, buttons) ---------- */
+html[data-theme="green"]{
+  --frame:#136C3E; --inverse:#136C3E; --dark-edge:#0B4A29;
+  --chrome:#1A7E4A; --chrome-hover:#22905A; --chrome-ring:#22905A;
+  --chrome-text:#DCF6E6; --chrome-muted:#C6F1D5; --chrome-muted-2:#C6F1D5;
+  --cta-bg:#136C3E; --cta-hover:#1A7E4A; --cta-edge:#0B4A29; --cta-glow:0 14px 26px -14px rgba(11,74,41,.6);
+  --hero-bg:#136C3E; --hero-hover:#1A7E4A; --hero-edge:#0B4A29; --hero-glow:0 14px 26px -14px rgba(11,74,41,.6);
+  --rec-bg:#136C3E; --rec-hover:#1A7E4A; --rec-edge:#0B4A29; --rec-ring:#fff; --rec-glow:0 12px 24px -8px rgba(11,74,41,.6);
+}
+
+/* ---------- Typography ---------- */
+html.lm :is(.brand h1,.splash h2,.cutout b,.pane-head h2,.rm-title,.rm-txt b,.map-head h2,
+  .ov-title,.ov-step,.ov-pill,.ov-stats b,.tab-txt b,.type-head h3,.sheet-head h3,.card-top .tag,.coach-head .tag,
+  .q-sub,.ov-label,.live::before,.fb-head h2,button.primary,button.ghost,.link-btn,.ov-go,.recbtn,.fb-open,
+  .map-segs button,.stop-tag,.st-t,.sec,.rec-label){font-family:var(--font-display)}
+html.lm .ov-title{font-weight:800;letter-spacing:-.03em}
+html.lm :is(.pane-head h2,.rm-title){font-weight:700;letter-spacing:-.02em}
+html.lm :is(.q-text,.ov-question){font-family:var(--font-reading);font-weight:500;letter-spacing:0}
+html.lm :is(.ov-passage,.passage){font-family:var(--font-reading)}
+html.lm .read-passage{font-family:var(--font);font-weight:500}
+html.lm :is(.timer,.lv-core b,.ring-num,.fx-num b,.count,.tab .pct,.ov-stats b,.rm-num){font-family:var(--font-num);font-weight:600;letter-spacing:0}
+html.lm :is(.crumb,.ov-label,.q-sub){letter-spacing:.04em}
+
+/* ---------- Buttons (Figma Button: pill + tactile offset that collapses when pressed) ---------- */
+html.lm :is(button.primary,.link-btn){border-radius:999px;background:var(--cta-bg);color:#fff;box-shadow:0 4px 0 var(--cta-edge),var(--cta-glow);
+  transition:transform .15s var(--ease),box-shadow .15s var(--ease),background .2s}
+html.lm :is(button.primary,.link-btn):hover{background:var(--cta-hover);transform:translateY(-1px);box-shadow:0 5px 0 var(--cta-edge),var(--cta-glow)}
+html.lm :is(button.primary,.link-btn):active{transform:translateY(3px);box-shadow:0 1px 0 var(--cta-edge)}
+html.lm button.primary:disabled{background:var(--soft);color:var(--tertiary);box-shadow:none;transform:none}
+
+/* Secondary: light tactile (Start over / Try again) */
+html.lm button.ghost{border-radius:999px;background:var(--soft);color:var(--text);border:0;box-shadow:var(--tactile-light);transition:transform .15s var(--ease),box-shadow .15s var(--ease),background .2s}
+html.lm button.ghost:hover{background:var(--neutral-150);transform:translateY(-1px);box-shadow:0 5px 0 #C9CDD5}
+html.lm button.ghost:active{transform:translateY(3px);box-shadow:0 1px 0 #C9CDD5}
+
+/* Hero = Figma "Lesson CTA": pill with a white play disc */
+html.lm .ov-go{border-radius:999px;padding:0 30px 0 10px;gap:14px;background:var(--hero-bg);color:#fff;box-shadow:0 6px 0 var(--hero-edge),var(--hero-glow);
+  transition:transform .15s var(--ease),box-shadow .15s var(--ease),background .2s}
+html.lm .ov-go::before{content:"";flex:none;width:44px;height:44px;border-radius:50%;box-sizing:border-box;border:3px solid var(--soft);
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5.5v13l11-6.5z' fill='%230D0F14'/%3E%3C/svg%3E") 56% 50%/18px no-repeat}
+html.lm .ov-go:hover{background:var(--hero-hover);transform:translateY(-2px);box-shadow:0 8px 0 var(--hero-edge),var(--hero-glow)}
+html.lm .ov-go:active{transform:translateY(5px);box-shadow:0 1px 0 var(--hero-edge)}
+
+/* Record button (Figma Record Bar) */
+html.lm .recbtn{background:var(--rec-bg);box-shadow:0 0 0 3px var(--rec-ring),0 4px 0 3px var(--rec-edge),var(--rec-glow)}
+html.lm .recbtn:hover{background:var(--rec-hover)}
+html.lm .recbtn:active{transform:translateY(3px);box-shadow:0 0 0 3px var(--rec-ring),0 1px 0 3px var(--rec-edge)}
+html.lm .recbtn i::before,html.lm .recbtn.on::before{border-color:var(--rec-bg)}
+html.lm .recbtn.on{background:#fff;box-shadow:var(--tactile-light),0 12px 24px -8px rgba(0,0,0,.5)}
+html.lm .recbtn.on i::after{background:var(--rec-bg)}
+html.lm .recorder::before{background:var(--inverse)}
+html.lm .recorder{box-shadow:none}
+html.lm .recorder .rec-label{color:var(--chrome-muted)}
+
+/* Dark surfaces follow the option's dark colour */
+html.lm :is(.steps li.on,.ov-points li)::before,
+html.lm :is(.wprog span,.toast,.fb-open,.tabs,.fb-close,.card-top .tag,.coach-head .tag,.q-points .n,
+  .stop-tag.sel,.map-segs button.on,.map-btn.on,.back-btn,.word-pop),
+html.lm .word-pop::before{background:var(--inverse)}
+html.lm .fb-close:hover{background:var(--chrome-hover)}
+html.lm :is(.fb-open,.map-segs button.on,.map-btn.on){box-shadow:0 4px 0 var(--dark-edge)}
+html.lm :is(.fb-open,.map-btn):active{transform:translateY(4px);box-shadow:none}
+html.lm .map-btn{box-shadow:var(--tactile-light)}
+html.lm .type-btn{background:var(--chrome);color:var(--chrome-text)}
+html.lm .type-btn:hover{background:var(--chrome-hover);color:#fff}
+html.lm .ov-pill.next{background:var(--cta-bg)}
+html.lm .ov-pill.done{background:var(--accent-soft);color:var(--accent-text)}
+
+/* Score card + graph in the option's colours */
+html.lm .fx-card{background:radial-gradient(120% 90% at 70% -10%,color-mix(in srgb,var(--inverse),#fff 30%) 0%,var(--inverse) 48%,color-mix(in srgb,var(--inverse),#000 40%) 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 30px 60px -30px color-mix(in srgb,var(--inverse),#000 50%)}
+html.lm .fx-glow{background:radial-gradient(closest-side,color-mix(in srgb,var(--inverse),#fff 55%),transparent);opacity:.6}
+html.lm :is(.fx-line,.fx-arrow){stroke:color-mix(in srgb,var(--inverse),#fff 78%)}
+html.lm #fxArea stop{stop-color:color-mix(in srgb,var(--inverse),#fff 70%)}
+html.lm .fx-dot{fill:var(--inverse)}
+html.lm .fx-tip{background:linear-gradient(#fff,color-mix(in srgb,var(--inverse),#fff 72%));color:var(--inverse);font-family:var(--font-display)}
+html.lm .fx-delta span{color:color-mix(in srgb,var(--inverse),#fff 72%)}
+html.lm :is(.fx-label,.fx-axis,.fx-num small){color:color-mix(in srgb,var(--inverse),#fff 65%)}
+html.lm .fx-delta{color:color-mix(in srgb,var(--inverse),#fff 85%)}
+
+/* cards */
+html.lm :is(.passage-card,.q-card){border-radius:var(--r-xl);box-shadow:var(--shadow)}
+html.lm .rm-step.sel .rm-txt{box-shadow:0 0 0 1px var(--line),var(--shadow-float)}
+html.lm :is(.sheet,.type-card,.fb-dialog){box-shadow:var(--shadow-lg)}
+html.lm :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- Theme picker (all options) ---------- */
+.theme-switch{position:fixed;left:18px;bottom:14px;z-index:60;display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:999px;
+  background:var(--chrome);box-shadow:inset 0 0 0 1px var(--chrome-ring),0 10px 24px -10px rgba(0,0,0,.5)}
+.theme-switch button{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--chrome-text);font:600 12px var(--font-display,inherit);padding:5px 11px 5px 5px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:background .2s,color .2s}
+.theme-switch button b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;font-size:11px;background:rgba(255,255,255,.14)}
+.theme-switch button:hover{color:#fff}
+.theme-switch button:not([aria-pressed="true"]){padding:5px}
+.theme-switch button:not([aria-pressed="true"]) span{display:none}
+.theme-switch button[aria-pressed="true"]{background:#fff;color:#0d0f14}
+.theme-switch button[aria-pressed="true"] b{background:var(--sw,#0d0f14);color:#fff}
+.theme-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 14px}
+.theme-row button{display:flex;gap:10px;align-items:flex-start;text-align:left;padding:12px;border-radius:14px;border:0;background:var(--soft);color:var(--ink);font-weight:700;cursor:pointer;box-shadow:inset 0 0 0 1.5px var(--line)}
+.theme-row button[aria-pressed="true"]{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}
+.theme-row small{display:block;font-weight:500;color:var(--muted);margin-top:2px}
+.theme-row .chips{display:flex;gap:3px;margin-top:6px}
+.theme-row .chips i{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+
+/* ---------- Record button: red in every option (Figma Extended · bg/record = red/500) ---------- */
+html.lm[data-theme]{
+  --rec-bg:#E2262D; --rec-hover:#EA3F45; --rec-edge:#A3161C; --rec-ring:#fff;
+  --rec-glow:0 12px 24px -8px rgba(226,38,45,.55);
+}

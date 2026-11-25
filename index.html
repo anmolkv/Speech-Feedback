@@ -5,8 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <title>Speak Feedback</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&family=Lexend:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Chakra+Petch:wght@600&display=swap" rel="stylesheet">
+<script>/* theme before first paint: ?theme=classic|navy|brand|sky|purple|green (or 1-6), else last choice, else navy */
+(function(){var L=["classic","navy","brand","sky","purple","green"],q=(location.search.match(/[?&]theme=([a-z0-9]+)/)||[])[1],t;try{t=q||localStorage.getItem("speak-theme")}catch(e){t=q}if(t==="new")t="navy";if(t==="snigdha")t="sky";if(/^[1-6]$/.test(t||""))t=L[t-1];if(L.indexOf(t)<0)t="navy";var h=document.documentElement;h.dataset.theme=t;h.classList.toggle("lm",t!=="classic");})();</script>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="theme-new.css">
+<link rel="stylesheet" href="transition.css">
 </head>
 <body>
 <div class="splash" id="splash" aria-hidden="true">
@@ -19,20 +23,63 @@
 </div>
 
 <header class="toolbar">
-  <div class="tb-left"><div class="sb-prog" id="sDone"><span class="track"><i></i></span><em>0 of 4 done</em></div></div>
+  <div class="tb-left">
+    <div class="sb-prog" id="sDone"><span class="track"><i></i></span><em>0 of 4 done</em></div>
+    <button class="icon-btn corner-btn back-btn" id="backBtn" type="button" title="Back to the segment" aria-label="Back to the segment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+  </div>
   <div class="brand">
     <div class="app-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h9M4 12h6M4 17h9"/><path d="M17 8v8M20 10v4M14 10.5v3"/></svg></div>
     <h1>Feedback<small>Speaking practice</small></h1>
   </div>
+  <!-- Task open: the tool name drops into a cut-out hanging from the bar -->
+  <div class="cutout" id="cutout" aria-live="polite">
+    <small id="cutMeta">Read aloud</small>
+    <b><span class="cut-ico" id="cutIco"><i class="ico"></i></span><span id="cutName">First day</span></b>
+  </div>
   <div class="tools">
+    <div class="theme-switch" role="group" aria-label="Theme"><button type="button" data-theme-set="classic" aria-pressed="false" title="Original look" style="--sw:#2b2b2e"><b>1</b><span>Classic</span></button><button type="button" data-theme-set="navy" aria-pressed="false" title="Near-black navy frame and buttons" style="--sw:#0E1A40"><b>2</b><span>Navy</span></button><button type="button" data-theme-set="brand" aria-pressed="false" title="Figma Brand &amp; CTA: blue and black" style="--sw:#2B4FD8"><b>3</b><span>Blue &amp; Black</span></button><button type="button" data-theme-set="sky" aria-pressed="false" title="Snigdha's pick: sky/700" style="--sw:#11577E"><b>4</b><span>Sky</span></button><button type="button" data-theme-set="purple" aria-pressed="false" title="Snigdha's pick: purple/600" style="--sw:#8A4FB0"><b>5</b><span>Purple</span></button><button type="button" data-theme-set="green" aria-pressed="false" title="Snigdha's pick: green/700" style="--sw:#136C3E"><b>6</b><span>Green</span></button></div>
     <button class="icon-btn corner-btn" id="settingsBtn" type="button" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    <!-- Level timer (task screen): dashed half-ring = time used, centre = time left -->
+    <div class="lv-timer" id="lvTimer" role="timer" aria-live="off" title="Time left for this level">
+      <svg class="lv-arc" id="lvArc" viewBox="-44 -44 88 88" aria-hidden="true"></svg>
+      <div class="lv-core"><b id="lvLeft">3:00</b><small id="lvSub">left</small></div>
+    </div>
     <div class="engine" id="engine" title="Grammar engine"><i></i><span>Grammar: not checked</span></div>
     <div class="engine" id="srEngine" title="Speech engine"><i></i><span>Speech: checking…</span></div>
   </div>
 </header>
 
 
-<main id="speakView" class="app">
+<!-- Segment: the list of speaking tasks. Tap one to open it. -->
+<main id="homeView" class="app home">
+  <section class="home-wrap">
+    <!-- Left: the segment as a little 3D town. Each task is a stop on the road. -->
+    <div class="map" id="map">
+      <div class="map-ground" id="mapGround"></div>
+      <div class="map-tags" id="mapTags"></div>
+      <div class="map-trail" id="mapTrail"></div>
+      <nav class="roadmap" id="roadmap" aria-label="Speaking tasks">
+        <svg class="rm-line" id="rmLine" aria-hidden="true"></svg>
+        <h2 class="rm-title" id="rmTitle">Your roadmap to<br>confident speaking</h2>
+        <ol class="rm-steps" id="rmSteps"></ol>
+      </nav>
+      <div class="map-head">
+        <div class="crumb" id="mapCrumb">Communication skills · Segment 1</div>
+        <h2 id="mapTitle">First week</h2>
+        <div class="map-segs" id="mapSegs" role="tablist" aria-label="Segments"></div>
+      </div>
+      <div class="map-tools">
+        <button class="map-btn" id="mapWide" type="button" title="See the whole route" aria-label="See the whole route"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button>
+        <button class="map-btn" id="mapFocus" type="button" title="Back to the selected stop" aria-label="Back to the selected stop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+      </div>
+      <div class="map-hint">Tap a stop · ↑ ↓ to move · Enter to start</div>
+    </div>
+    <!-- Right: overview of the chosen stop -->
+    <section class="overview" id="overview" aria-live="polite"></section>
+  </section>
+</main>
+
+<main id="speakView" class="app" hidden>
   <aside class="sidebar">
     <div class="bar-bg" aria-hidden="true"></div>
     <div class="sb-head">Speaking tasks</div>
@@ -60,7 +107,7 @@
           <button class="recbtn" id="recBtn" type="button" aria-keyshortcuts="Space"><i></i><span>Start recording</span></button>
           <kbd class="rec-key">Space</kbd>
         </div>
-        <button class="type-btn" id="typeBtn" type="button" title="No microphone? Type what was said" aria-label="No microphone? Type what was said"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M6 9.5h.01M9.5 9.5h.01M13 9.5h.01M16.5 9.5h.01M6 13h.01M18 13h.01M9 15.5h6"/></svg><span>Type</span></button>
+        <button class="type-btn" id="typeBtn" type="button" hidden title="No microphone? Type what was said" aria-label="No microphone? Type what was said"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M6 9.5h.01M9.5 9.5h.01M13 9.5h.01M16.5 9.5h.01M6 13h.01M18 13h.01M9 15.5h6"/></svg><span>Type</span></button>
       </div>
 
 
@@ -102,6 +149,16 @@
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div class="sheet-head"><h3 id="sheetTitle">Settings</h3><button class="link-btn" id="settingsDone" type="button">Done</button></div>
     <div class="sheet-body">
+      <div class="sec">Theme</div>
+      <div class="theme-row" role="group" aria-label="Theme">
+        <button type="button" data-theme-set="classic" aria-pressed="false"><span>1 · Classic<small>Original look</small><span class="chips"><i style="background:#2b2b2e"></i><i style="background:#1f4fd8"></i><i style="background:#e2262d"></i></span></span></button>
+        <button type="button" data-theme-set="navy" aria-pressed="false"><span>2 · Navy<small>Near-black navy frame and buttons</small><span class="chips"><i style="background:#0E1A40"></i><i style="background:#2B4FD8"></i><i style="background:#F3F4F6"></i></span></span></button>
+        <button type="button" data-theme-set="brand" aria-pressed="false"><span>3 · Blue &amp; Black<small>Figma Brand &amp; CTA buttons</small><span class="chips"><i style="background:#000"></i><i style="background:#1D1F25"></i><i style="background:#2B4FD8"></i></span></span></button>
+        <button type="button" data-theme-set="sky" aria-pressed="false"><span>4 · Sky<small>Snigdha's pick: sky/700 #11577E</small><span class="chips"><i style="background:#11577E"></i><i style="background:#D3EEFA"></i></span></span></button>
+        <button type="button" data-theme-set="purple" aria-pressed="false"><span>5 · Purple<small>Snigdha's pick: purple/600 #8A4FB0</small><span class="chips"><i style="background:#8A4FB0"></i><i style="background:#F4EAF8"></i></span></span></button>
+        <button type="button" data-theme-set="green" aria-pressed="false"><span>6 · Green<small>Snigdha's pick: green/700 #136C3E</small><span class="chips"><i style="background:#136C3E"></i><i style="background:#DCF6E6"></i></span></span></button>
+      </div>
+
       <div class="sec">Grammar (spoken answers)</div>
       <!-- Grammar server address: hidden from learners. To use your own LanguageTool server, change this value. -->
       <input type="hidden" id="ltUrl" value="https://api.languagetool.org/v2/check">
@@ -123,5 +180,7 @@
 <script src="script.js"></script>
 <script src="motion.js"></script>
 <script src="notch.js"></script>
+<script src="theme.js"></script>
+<script src="transition.js"></script>
 </body>
 </html>

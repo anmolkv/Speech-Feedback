@@ -1,0 +1,43 @@
+/* Learning Modules — Design System · Color theme
+   Source: Figma "Foundations" (node 2:131). Two ramps: Blue (action) + Neutral (everything else).
+   Rule of thumb: black for content, blue for the one thing to do next. */
+:root{
+  /* ---- Primitives ---- */
+  --blue-50:#E8EDFF;  --blue-100:#DDE7FF; --blue-400:#4D7DFF;
+  --blue-600:#2B4FD8; --blue-700:#3557C5; --blue-900:#1E3A8A;
+
+  --neutral-0:#FFFFFF;   --neutral-25:#F7F8FA;  --neutral-50:#F3F4F6;
+  --neutral-100:#EEF0F4; --neutral-150:#E7E9EE; --neutral-200:#E3E6EB;
+  --neutral-300:#D9DCE2; --neutral-350:#C9CCD3; --neutral-400:#A4A9B4;
+  --neutral-500:#8B909C; --neutral-600:#6A7080; --neutral-700:#3D4250;
+  --neutral-800:#1D1F25; --neutral-900:#16181D; --neutral-950:#0D0F14;
+  --neutral-1000:#000000;
+
+  /* ---- Semantic: background ---- */
+  --bg:var(--neutral-50);            /* bg/canvas */
+  --card:var(--neutral-0);           /* bg/surface */
+  --soft-2:var(--neutral-25);        /* bg/subtle */
+  --soft:var(--neutral-100);         /* bg/muted */
+  --fill3:var(--neutral-300);        /* bg/muted-strong */
+  --inverse:var(--neutral-800);      /* bg/inverse */
+  --frame:var(--neutral-1000);       /* bg/frame */
+  --accent:var(--blue-600);          /* bg/accent, border/focus */
+  --accent-soft:var(--blue-50);      /* bg/accent-subtle */
+
+  /* ---- Semantic: text ---- */
+  --text:var(--neutral-900);         /* text/primary */
+  --ink:var(--neutral-950);          /* text/strong */
+  --muted:var(--neutral-600);        /* text/secondary */
+  --tertiary:var(--neutral-400);     /* text/tertiary */
+  --on-accent:var(--neutral-0);      /* text/inverse */
+  --accent-text:var(--blue-700);     /* text/accent */
+
+  /* ---- Semantic: icon ---- */
+  --icon:var(--neutral-900);
+  --icon-inverse:var(--neutral-0);
+
+  /* ---- Semantic: border ---- */
+  --line:var(--neutral-150);         /* border/default */
+  --line-strong:var(--neutral-350);  /* border/strong */
+  --focus:var(--blue-600);           /* border/focus */
+}

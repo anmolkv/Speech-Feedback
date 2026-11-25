@@ -388,7 +388,7 @@ const FILLERS = /\b(um+|uh+|er+|erm|hmm+|ah+)\b/gi;
 const FILLER_ONE = /^(um+|uh+|er+|erm|hmm+|ah+)$/i;
 
 let sCurrent = "read1", sPrev = null;
-const S_COLORS = {read1:"#ff6a3d", read2:"#3ee08f", intro:"#f2e94e", answer:"#6f9bff"};
+const S_COLORS = {read1:"#ff6a3d", read2:"#3ee08f", intro:"#f2e94e", answer:"#6f9bff", read3:"#b48cff", read4:"#ff8fb1", weekend:"#ffb547", help:"#3cc8e0", read5:"#8fd16a", read6:"#e8a66f", order:"#ff7a8a", place:"#59b8ff"};
 function sTabHTML(k, t, active){
   const best = RESULTS["s:"+k], [a,b] = best ? best.split("/").map(Number) : [0,1];
   const p = best ? a/b : 0, pct = Math.round(p*100);
@@ -404,6 +404,7 @@ function renderSTabs(){
   renderDone("sDone", "s:", Object.keys(STASKS).length);
   if ($("recLabel")) $("recLabel").textContent = STASKS[sCurrent].kind==="read" ? "Read the passage aloud" : "Record your answer";
   $("sTabs").querySelectorAll(".tab").forEach(b => b.onclick = () => { if (recState.on || b.dataset.k === sCurrent) return; sPrev = sCurrent; sCurrent = b.dataset.k; renderSTabs(); renderSPrompt(); resetSpeakOut(); });
+  renderCutout(); renderSegment();
 }
 function renderSPrompt(){
   const t = STASKS[sCurrent]; $("sTitle").textContent = t.label.replace(/^Speak: /,"");
@@ -413,8 +414,7 @@ function renderSPrompt(){
       <div class="passage-card">
         <div class="card-top"><span class="tag">Passage</span><span class="meta">${n} words · about ${secs} seconds at a natural pace</span></div>
         <div class="read-passage">${esc(t.text)}</div>
-      </div>
-      <p class="hint"><b>How it works:</b> press the red button (or <kbd>Space</kbd>), read the passage aloud, then press it again to stop. Words light up as you read.</p>`;
+      </div>`;
     $("sRubricInfo").innerHTML = `<b>How it's scored:</b> <b>Accuracy</b> /4 · <b>Pace</b> /3 · <b>Phrasing</b> /3 = 10 (Read-Aloud Scoring Rules). Errors count fully, minor errors count partly; pronunciation tips, repeats, fillers and self-corrections never lower the score.`;
   } else {
     const q = esc(t.prompt.replace(/\s*Speak for [^.]*\.\s*$/i, ""));
@@ -512,12 +512,10 @@ async function stopRec(){
   if (timing.speakSecs && tw && (tw / (timing.speakSecs/60) > 260 || timing.speakSecs < endT*0.3)){ timing.speakSecs = endT; timing.measured = false; }
   if (R.srError && !transcript){
     $("recStatus").textContent = srErrorMsg(R.srError);
-    $("manualBox").open = true; $("manualSecs").value = Math.round(timing.speakSecs || endT);
     return;
   }
   if (!transcript){
-    $("recStatus").textContent = SR ? "No speech was recognised. Speak closer to the microphone and try again." : "Type what was said below to get feedback.";
-    if (!SR){ $("manualBox").open = true; $("manualSecs").value = Math.round(timing.speakSecs || endT); }
+    $("recStatus").textContent = SR ? "No speech was recognised. Speak closer to the microphone and try again." : "This browser can't turn speech into text. Open the tool in Chrome or Edge and try again.";
     return;
   }
   $("recStatus").textContent = "";
@@ -950,7 +948,7 @@ renderSTabs(); renderSPrompt();
   let had = false;
   const open = () => {
     $("fbTitle").textContent = STASKS[sCurrent].label;
-    const keys = Object.keys(STASKS), i = keys.indexOf(sCurrent);
+    const keys = SEGMENTS[segOf(sCurrent)].tasks, i = keys.indexOf(sCurrent);
     $("fbNext").textContent = i < keys.length - 1 ? `Next: ${STASKS[keys[i+1]].label.replace(/^Read aloud: /,"")} →` : "Back to the first task →";
     view.classList.add("fb-on"); modal.classList.add("show"); modal.setAttribute("aria-hidden","false");
     setTimeout(() => $("fbClose").focus({preventScroll:true}), 60);
@@ -962,7 +960,7 @@ renderSTabs(); renderSPrompt();
     if (!n){ n = document.createElement("div"); n.id = "inlineNote"; n.className = "inline-note"; n.setAttribute("role","status"); document.body.appendChild(n); }
     n.textContent = msg; n.classList.add("show"); clearTimeout(n._t); n._t = setTimeout(() => n.classList.remove("show"), 3800);
   };
-  function sync(){
+  function sync(recs){
     if (out.children.length === 1 && out.firstElementChild.matches(".callout.warn")){
       note(out.firstElementChild.textContent.trim());
       out.innerHTML = `<div class="empty">Your feedback will appear here.</div>`;
@@ -970,7 +968,9 @@ renderSTabs(); renderSPrompt();
     }
     const has = !isEmpty();
     view.classList.toggle("has-fb", has);
-    if (has && !had) open();
+    // open for a new result too (e.g. recording again after closing the pop-up), not only the first one
+    const fresh = (recs || []).some(r => [...r.addedNodes].some(n => n.nodeType === 1 && !n.matches(".fx-hero, .empty")));
+    if (has && (!had || fresh) && !modal.classList.contains("show")) open();
     if (!has) close();
     had = has;
   }
@@ -979,8 +979,8 @@ renderSTabs(); renderSPrompt();
   $("fbOpen").onclick = open;
   $("fbRetry").onclick = () => { close(); resetSpeakOut(); };
   $("fbNext").onclick = () => {
-    const keys = Object.keys(STASKS), next = keys[(keys.indexOf(sCurrent) + 1) % keys.length];
-    close(); document.querySelector(`#sTabs .tab[data-k="${next}"]`)?.click();
+    const keys = SEGMENTS[segOf(sCurrent)].tasks, next = keys[(keys.indexOf(sCurrent) + 1) % keys.length];
+    close(); openTask(next);
   };
   modal.addEventListener("click", e => { if (e.target === modal) close(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && modal.classList.contains("show") && $("settingsSheet").hidden) close(); });
@@ -1072,3 +1072,493 @@ renderSTabs(); renderSPrompt();
   document.addEventListener("scroll", hide, true);
   addEventListener("resize", hide);
 })();
+
+
+/* =========================================================
+   SEGMENT (home) — the list of speaking tasks.
+   Tapping a task opens it; inside a task the tabs are gone and
+   the task's name sits in the cut-out hanging from the black bar.
+   ========================================================= */
+function taskName(t){ return t.label.replace(/^(Read aloud|Speak): /, ""); }
+function taskMeta(t){
+  return t.kind === "read" ? { kind: "Read aloud", time: `~${Math.round(words(t.text) / 2.1)} s`, skill: "Reading aloud" }
+                           : { kind: "Speak", time: `${t.minSec}–${t.maxSec} s`, skill: "Speaking" };
+}
+function taskBlurb(t){
+  return t.kind === "read" ? `Read a ${words(t.text)}-word passage aloud. Words light up as you read, then you get feedback on accuracy, pace and phrasing.`
+                           : t.prompt.replace(/\s*Speak for [^.]*\.\s*$/i, "");
+}
+function renderCutout(){
+  const t = STASKS[sCurrent], m = taskMeta(t); if (!$("cutout")) return;
+  $("cutName").textContent = taskName(t);
+  $("cutMeta").textContent = `${m.kind} · ${m.time}`;
+  $("cutIco").dataset.k = sCurrent;
+  $("cutout").style.setProperty("--c", S_COLORS[sCurrent] || "#6f9bff");
+}
+/* =========================================================
+   SEGMENTS + MAP — the Segment screen is a little 3D town.
+   A road runs into the distance; each task is a stop on it.
+   Pick a stop: the blue route grows to it, the arrow puck drives
+   there and the camera follows. Overview of the stop on the right.
+   ========================================================= */
+var SEG_TASKS = ["read1", "read2", "intro", "answer"];
+var SEGMENTS = [
+  { name: "Roadmap", style: "line", tasks: SEG_TASKS },
+  { name: "City map", style: "town", tasks: SEG_TASKS },
+  { name: "Road trip", style: "trail", tasks: SEG_TASKS },
+];
+var segCur = 0, segSel = null, mapWide = false;
+function segOf(k){ return segCur || 0; }   // every segment has the same tasks: stay on the one in view
+function segKeys(){ return SEGMENTS[segCur].tasks; }
+function segNext(){ return segKeys().find(k => !RESULTS["s:" + k]) || null; }
+
+var MAP_W = 1000, MAP_L = 3000, ROAD = [410, 590], SIDE = 90;
+function stopY(i){ return MAP_L - 380 - i * 500; }
+function mapRand(seed){ let x = seed * 9301 + 49297; return () => (x = (x * 9301 + 49297) % 233280) / 233280; }
+function boxHTML(x, y, w, d, h, cls = ""){
+  return `<div class="bx ${cls}" style="left:${x}px;top:${y}px;width:${w}px;height:${d}px;--h:${h}px">` +
+    `<i class="sh"></i><i class="f-top"></i><i class="f-s"></i><i class="f-n"></i><i class="f-w"></i><i class="f-e"></i></div>`;
+}
+function buildMap(){
+  const g = $("mapGround"); if (!g) return;
+  const rnd = mapRand(segCur * 17 + 5), keys = segKeys();
+  let h = `<div class="road"></div><i class="curb l"></i><i class="curb r"></i>`;
+  // buildings on both sides of the road
+  [[20, ROAD[0] - SIDE], [ROAD[1] + SIDE, MAP_W - 20]].forEach(([x0, x1], side) => {
+    let y = 40;
+    while (y < MAP_L - 60){
+      const d = 110 + rnd() * 190, w = Math.min(x1 - x0, 130 + rnd() * 160), h3 = 40 + rnd() * (y < MAP_L * .55 ? 170 : 110);
+      const x = side ? x0 + rnd() * 20 : x1 - w - rnd() * 20;
+      h += boxHTML(Math.round(x), Math.round(y), Math.round(w), Math.round(d), Math.round(h3), rnd() > .7 ? "glass" : "");
+      y += d + 40 + rnd() * 90;
+    }
+  });
+  // low kerb blocks / benches along the pavements
+  for (let y = 120; y < MAP_L - 120; y += 260 + rnd() * 160){
+    const left = rnd() > .5, x = left ? ROAD[0] - 60 - rnd() * 20 : ROAD[1] + 26 + rnd() * 20;
+    h += boxHTML(Math.round(x), Math.round(y), 34, 70 + Math.round(rnd() * 40), 14, "kerb");
+  }
+  // route: grey track to the last stop, blue fill up to the chosen stop
+  const yStart = MAP_L - 120, yEnd = stopY(keys.length - 1) - 260;
+  h += `<i class="route-track" style="top:${yEnd}px;height:${yStart - yEnd}px"></i><i class="route-fill" id="routeFill" style="top:${yStart}px;height:0"></i>`;
+  // stops
+  h += keys.map((k, i) => {
+    const t = STASKS[k], best = RESULTS["s:" + k];
+    return `<div class="stop ${best ? "done" : ""}" data-k="${k}" style="top:${stopY(i)}px;--c:${S_COLORS[k]}">` +
+      `<i class="stop-pad"></i></div>`;
+  }).join("");
+  // tags live in a flat layer on top (so buildings never hide them); syncTags() pins them to the stops
+  $("mapTags").innerHTML = keys.map((k, i) => {
+    const t = STASKS[k], best = RESULTS["s:" + k];
+    return `<button class="stop-tag ${i % 2 ? "to-l" : ""} ${best ? "done" : ""}" type="button" data-pick="${k}" style="--c:${S_COLORS[k]}"><span class="st-n">${best ? "✓" : i + 1}</span><span class="st-t"><b>${esc(taskName(t))}</b><small>${esc(taskMeta(t).kind)} · ${taskMeta(t).time}</small></span></button>`;
+  }).join("");
+  h += `<div class="puck" id="puck" style="top:${yStart}px"><i></i></div>`;
+  g.innerHTML = h;
+}
+function placeMap(instant){
+  const g = $("mapGround"), map = $("map"); if (!g || !map.offsetParent) return;
+  if (SEGMENTS[segCur].style === "trail") return placeTrail(instant);
+  if (SEGMENTS[segCur].style === "line") return placeLine(instant);
+  const keys = segKeys(), i = Math.max(0, keys.indexOf(segSel)), y = stopY(i), H = map.clientHeight, W = map.clientWidth;
+  if (instant){ g.classList.add("no-anim"); }
+  // camera: keep the chosen stop low in the view; "wide" shows the whole route
+  const fit = Math.min(.9, Math.max(.5, W / 1150));
+  if (mapWide){
+    const mid = (stopY(0) + stopY(keys.length - 1)) / 2;
+    g.style.transformOrigin = `50% ${mid}px`;
+    g.style.transform = `translate(-50%, ${H * .52 - mid}px) rotateX(52deg) scale(${(fit * .5).toFixed(3)})`;
+  } else {
+    g.style.transformOrigin = `50% ${y}px`;
+    g.style.transform = `translate(-50%, ${H * .7 - y}px) rotateX(58deg) scale(${fit.toFixed(3)})`;
+  }
+  const fill = $("routeFill"), puck = $("puck"), yStart = MAP_L - 120;
+  fill.style.top = y + "px"; fill.style.height = (yStart - y) + "px";
+  puck.style.top = y + "px";
+  g.querySelectorAll(".stop").forEach(st => st.classList.toggle("sel", st.dataset.k === segSel));
+  $("mapTags").querySelectorAll(".stop-tag").forEach(b => b.classList.toggle("sel", b.dataset.pick === segSel));
+  if (instant){ g.getBoundingClientRect(); requestAnimationFrame(() => g.classList.remove("no-anim")); }
+  followTags(instant ? 60 : 1150);
+}
+/* keep each flat tag pinned to its stop while the camera moves */
+var tagRaf = 0, tagUntil = 0;
+function syncTags(){
+  const map = $("map"); if (!map || !map.offsetParent) return;
+  const M = map.getBoundingClientRect();
+  $("mapGround").querySelectorAll(".stop").forEach(st => {
+    const tag = $("mapTags").querySelector(`[data-pick="${st.dataset.k}"]`); if (!tag) return;
+    const r = st.getBoundingClientRect(), x = r.left - M.left, y = r.top - M.top;
+    const depth = Math.max(.62, Math.min(1, .55 + y / M.height * .55));
+    tag.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) scale(${depth.toFixed(3)})`;
+    tag.style.opacity = y < 70 || y > M.height + 20 ? 0 : 1;
+    tag.style.zIndex = Math.round(y);
+  });
+  if (SEGMENTS[segCur].style !== "town") return;
+}
+function followTags(ms){
+  tagUntil = performance.now() + ms; cancelAnimationFrame(tagRaf);
+  const loop = () => { syncTags(); if (performance.now() < tagUntil) tagRaf = requestAnimationFrame(loop); };
+  loop();
+}
+function renderSegment(instant = true){
+  if (!$("mapGround") || !SEGMENTS) return;   // called early by renderSTabs, before the segment data exists
+  const keys = segKeys();
+  if (!keys.includes(segSel)) segSel = segNext() || keys[0];
+  $("mapTitle").textContent = SEGMENTS[segCur].name;
+  $("mapCrumb").textContent = `Communication skills · Segment ${segCur + 1}`;
+  const style = SEGMENTS[segCur].style;
+  $("map").classList.toggle("is-trail", style === "trail");
+  $("map").classList.toggle("is-line", style === "line");
+  if (style === "trail"){ buildTrail(); $("mapTags").innerHTML = ""; }
+  else if (style === "line"){ buildLine(); $("mapTags").innerHTML = ""; }
+  else buildMap();
+  renderSegTabs(); renderOverview(segSel);
+  requestAnimationFrame(() => placeMap(instant));
+}
+function renderSegTabs(){
+  $("mapSegs").innerHTML = SEGMENTS.map((sg, i) => {
+    const done = sg.tasks.filter(k => RESULTS["s:" + k]).length;
+    return `<button type="button" class="${i === segCur ? "on" : ""}" data-seg="${i}"><b>Segment ${i + 1}</b><span>${esc(sg.name)} · ${done}/${sg.tasks.length}</span></button>`;
+  }).join("");
+}
+function pickStop(k){
+  if (!k || k === segSel) return;
+  segSel = k; renderOverview(k); placeMap(false);
+  if (innerWidth < 900) $("overview").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+document.addEventListener("click", e => {
+  const seg = e.target.closest("[data-seg]");
+  if (seg){ const i = +seg.dataset.seg; if (i !== segCur){ segCur = i; segSel = null; mapWide = false; $("mapWide").classList.remove("on"); renderSegment(true); } return; }
+  const b = e.target.closest("[data-pick]"); if (b){ b.dataset.pick === segSel && e.detail > 1 ? openTask(segSel) : pickStop(b.dataset.pick); }
+});
+addEventListener("resize", () => requestAnimationFrame(() => placeMap(true)));
+document.addEventListener("keydown", e => {
+  if ($("homeView").hidden || e.target.closest("input, textarea, select")) return;
+  const keys = segKeys(), i = keys.indexOf(segSel), line = SEGMENTS[segCur].style === "line";
+  const fwd = line ? ["ArrowDown", "ArrowRight"] : ["ArrowUp", "ArrowRight"], back = line ? ["ArrowUp", "ArrowLeft"] : ["ArrowDown", "ArrowLeft"];
+  if (fwd.includes(e.key) && i < keys.length - 1){ e.preventDefault(); pickStop(keys[i + 1]); }
+  if (back.includes(e.key) && i > 0){ e.preventDefault(); pickStop(keys[i - 1]); }
+  if (e.key === "Enter" && !e.target.closest("button")){ e.preventDefault(); openTask(segSel); }
+});
+function renderOverview(k){
+  const box = $("overview"); if (!box) return;
+  const keys = SEGMENTS[segOf(k)].tasks, t = STASKS[k], m = taskMeta(t), i = keys.indexOf(k), best = RESULTS["s:" + k];
+  const status = best ? `<span class="ov-pill done">Done · best ${esc(best)}</span>` : "";
+  const SHORT = { read1: "Read a short story out loud.", read2: "Read a college notice out loud.",
+                  intro: "Introduce yourself to your new classmates.", answer: "Talk about your first day at college.",
+                  read3: "Read the library rules out loud.", read4: "Read a phone message out loud.",
+                  weekend: "Tell us about your last weekend.", help: "Ask a senior the way to the canteen.",
+                  read5: "Read a bus-stand announcement.", read6: "Read a chai recipe out loud.",
+                  order: "Order food for you and a friend.", place: "Describe your favourite place in town." };
+  const chips = t.kind === "read" ? ["Accuracy", "Pace", "Phrasing"] : t.points.map(p => p.label);
+  const body = `<p class="ov-short">${esc(SHORT[k] || taskBlurb(t))}</p><div class="ov-chips">${chips.map(c => `<span>${esc(c)}</span>`).join("")}</div>`;
+  const words_ = "";
+  box.style.setProperty("--c", S_COLORS[k] || "#6f9bff");
+  const lim = ((typeof LV_LIMIT === "object" && LV_LIMIT) || { read: 180, speak: 240 })[t.kind] || 180;
+  const stats = [
+    [m.time, t.kind === "read" ? "to read it" : "to speak"],
+    [fmtTime(lim), "level time"],
+    [t.kind === "read" ? words(t.text) : t.points.length, t.kind === "read" ? "words" : "points to cover"],
+  ];
+  box.innerHTML = `<div class="ov-in">
+    <div class="ov-main">
+      <div class="ov-top"><span class="ov-step">Segment ${segOf(k) + 1} · Stop ${i + 1} of ${keys.length}</span>${status}</div>
+      <h3 class="ov-title">${esc(taskName(t)).replace(/-/g, "\u2011")}</h3>
+      <div class="ov-body">${body}</div>
+      <div class="ov-stats">${stats.map(([v, l]) => `<div><b>${esc(String(v))}</b><span>${esc(l)}</span></div>`).join("")}</div>
+      <div class="ov-foot"><button class="ov-go" type="button" data-open="${k}">${best ? "Practise again" : "Start task"}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+    </div>
+    <div class="ov-art" aria-hidden="true"><i class="ov-ring r1"></i><i class="ov-ring r2"></i><span class="ov-ico" data-k="${k}"><i class="ico"></i></span></div>
+  </div>`;
+}
+function showView(which){
+  const home = $("homeView"), task = $("speakView"), toTask = which === "task";
+  if ((toTask && !task.hidden) || (!toTask && !home.hidden)) return;
+  home.hidden = toTask; task.hidden = !toTask;
+  document.body.classList.toggle("in-task", toTask);
+  const v = toTask ? task : home;
+  v.classList.remove("enter", "leave"); void v.offsetWidth; v.classList.add("enter");
+  requestAnimationFrame(() => dispatchEvent(new Event("resize")));   // re-measure the recorder notch etc.
+}
+function openTask(k){
+  if (recState.on || !STASKS[k]) return;
+  if (k !== sCurrent){ sPrev = sCurrent; sCurrent = k; renderSTabs(); renderSPrompt(); resetSpeakOut(); }
+  renderCutout(); showView("task");
+}
+function goHome(){
+  if (recState.on) return;
+  if ($("fbModal").classList.contains("show")) $("fbClose").click();
+  segSel = sCurrent; showView("home"); renderSegment(true);
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-open]"); if (b) openTask(b.dataset.open); });
+$("backBtn").onclick = goHome;
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || $("speakView").hidden || recState.on) return;
+  if (!$("settingsSheet").hidden || document.querySelector(".fb-modal.show, .type-modal.show, .word-pop.show")) return;
+  goHome();
+});
+renderSegment(); renderCutout();
+
+
+/* =========================================================
+   LEVEL TIMER — time for the whole level (task), shown in the
+   top-right corner of the task screen (where Settings was).
+   Dashed half-ring fills as time is used; the centre shows time left.
+   Last 30 s: amber, and an amber ring drains inside the centre.
+   Time up: red, and it counts the extra time.
+   Runs while the task is open; pauses on the Segment page, while
+   the feedback pop-up is open, and when the browser tab is hidden.
+   ========================================================= */
+var LV_N = 11, LV_R = 36, LV_LIMIT = { read: 180, speak: 240 }, LV_WARN = 30;
+var lvUsed = {}, lvClock = null, lvLast = 0;
+function lvLimit(){ return LV_LIMIT[STASKS[sCurrent].kind] || 180; }
+function lvBuild(){
+  const svg = $("lvArc"); if (!svg) return;
+  const span = 180 / LV_N, gap = span * .5, pt = a => [LV_R * Math.cos(a * Math.PI / 180), LV_R * Math.sin(a * Math.PI / 180)];
+  let h = "";
+  for (let i = 0; i < LV_N; i++){
+    const [x1, y1] = pt(180 + i * span + gap / 2), [x2, y2] = pt(180 + (i + 1) * span - gap / 2);
+    h += `<path d="M${x1.toFixed(2)} ${y1.toFixed(2)} A${LV_R} ${LV_R} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}"/>`;
+  }
+  svg.innerHTML = h;
+}
+function lvRender(){
+  const el = $("lvTimer"); if (!el) return;
+  const lim = lvLimit(), used = lvUsed[sCurrent] || 0, left = lim - used;
+  const filled = Math.min(LV_N, Math.floor(used / lim * LV_N + 1e-6));
+  [...$("lvArc").children].forEach((d, i) => d.classList.toggle("on", i < filled));
+  el.classList.toggle("warn", left <= LV_WARN && left > 0);
+  el.classList.toggle("over", left <= 0);
+  el.style.setProperty("--left", Math.max(0, Math.min(1, left / LV_WARN)));
+  $("lvLeft").textContent = left > 0 ? fmtTime(Math.ceil(left)) : "+" + fmtTime(-left);
+  $("lvSub").textContent = left > 0 ? "left" : "over";
+  el.title = `Level time: ${fmtTime(lim)}. ${left > 0 ? fmtTime(Math.ceil(left)) + " left" : "Time is up"}`;
+}
+function lvTick(){
+  const now = performance.now(), dt = (now - lvLast) / 1000; lvLast = now;
+  if (document.hidden || $("speakView").hidden || $("fbModal").classList.contains("show")) return;
+  lvUsed[sCurrent] = (lvUsed[sCurrent] || 0) + Math.min(dt, 1);
+  lvRender();
+}
+function lvStart(){ clearInterval(lvClock); lvLast = performance.now(); lvClock = setInterval(lvTick, 250); lvRender(); }
+function lvStop(){ clearInterval(lvClock); lvClock = null; }
+lvBuild(); lvRender();
+// start / stop with the task screen, and switch to the right task's clock
+(function(){
+  const sv = showView; showView = function(which){ sv.apply(this, arguments); which === "task" ? lvStart() : lvStop(); };
+  const sp = renderSPrompt; renderSPrompt = function(){ sp.apply(this, arguments); lvLast = performance.now(); lvRender(); };
+})();
+$("mapWide").onclick = () => { mapWide = !mapWide; $("mapWide").classList.toggle("on", mapWide); placeMap(false); };
+$("mapFocus").onclick = () => { mapWide = false; $("mapWide").classList.remove("on"); placeMap(false); };
+
+/* =========================================================
+   SEGMENT 3 MAP — a winding country road seen from above.
+   A car drives along the road to the stop you pick; the
+   camera slides with it and a blue trail is drawn behind it.
+   ========================================================= */
+var TR = { cur: null, raf: 0 };
+var TR_GAP = 640, TR_Y = 520, TR_H = 1000;
+function trailY(x){ return TR_Y + 190 * Math.sin((x - 160) / 330); }
+function buildTrail(){
+  const box = $("mapTrail"); if (!box) return;
+  const keys = segKeys(), rnd = mapRand(99), WW = 520 + (keys.length - 1) * TR_GAP + 640;
+  let d = ""; for (let x = -300; x <= WW + 300; x += 12) d += (d ? " L" : "M") + x + " " + trailY(x).toFixed(1);
+  const stopX = keys.map((k, i) => 520 + i * TR_GAP);
+  // scenery: rocks along the road edges, bushes further out
+  let deco = "";
+  for (let x = 40; x < WW; x += 120 + rnd() * 160){
+    const side = rnd() > .5 ? 1 : -1, off = side * (95 + rnd() * 40), y = trailY(x) + off, w = 34 + rnd() * 46, h = w * (.62 + rnd() * .3), a = rnd() * 70 - 35;
+    deco += `<g class="rock" transform="translate(${x.toFixed(0)} ${y.toFixed(0)}) rotate(${a.toFixed(0)})"><ellipse class="rk-sh" cx="${(w*.18).toFixed(1)}" cy="${(h*.35).toFixed(1)}" rx="${(w/2).toFixed(1)}" ry="${(h/2).toFixed(1)}"/><path d="M${-w/2} ${h*.1} Q${-w*.45} ${-h/2} ${-w*.05} ${-h/2} Q${w*.48} ${-h*.48} ${w/2} ${h*.05} Q${w*.4} ${h/2} ${-w*.1} ${h*.48} Q${-w*.5} ${h*.45} ${-w/2} ${h*.1}Z"/><path class="rk-hi" d="M${-w*.32} ${-h*.12} Q${-w*.2} ${-h*.42} ${w*.1} ${-h*.38}"/></g>`;
+  }
+  for (let x = 0; x < WW; x += 230 + rnd() * 260){
+    const side = rnd() > .5 ? 1 : -1, y = trailY(x) + side * (230 + rnd() * 160), r = 26 + rnd() * 22;
+    let blobs = ""; for (let j = 0; j < 9; j++){ const aa = j / 9 * Math.PI * 2, rr = r * (.45 + rnd() * .35); blobs += `<circle cx="${(Math.cos(aa) * r * .55).toFixed(1)}" cy="${(Math.sin(aa) * r * .55).toFixed(1)}" r="${rr.toFixed(1)}"/>`; }
+    deco += `<g class="bush" transform="translate(${x.toFixed(0)} ${y.toFixed(0)})"><circle class="bu-sh" cx="${r*.3}" cy="${r*.45}" r="${r*1.15}"/>${blobs}<circle r="${(r*.6).toFixed(1)}"/></g>`;
+  }
+  const stops = keys.map((k, i) => `<g class="tr-stop ${RESULTS["s:" + k] ? "done" : ""}" data-k="${k}" transform="translate(${stopX[i]} ${trailY(stopX[i]).toFixed(1)})"><circle r="17"/><text y="5">${RESULTS["s:" + k] ? "✓" : i + 1}</text></g>`).join("");
+  const car = `<g id="trCar" class="tr-car"><ellipse class="car-sh" cx="6" cy="10" rx="66" ry="32"/>
+    <rect x="-62" y="-28" width="124" height="56" rx="26" class="car-body"/>
+    <path d="M-30 -22 Q-8 -25 28 -21 Q40 -12 40 0 Q40 12 28 21 Q-8 25 -30 22 Q-36 0 -30 -22Z" class="car-glass"/>
+    <path d="M-22 -16 L20 -16 Q28 0 20 16 L-22 16 Q-26 0 -22 -16Z" class="car-roof"/>
+    <rect x="52" y="-22" width="8" height="10" rx="3" class="car-lamp"/><rect x="52" y="12" width="8" height="10" rx="3" class="car-lamp"/></g>`;
+  box.innerHTML = `<div class="tr-world" id="trWorld" style="width:${WW}px;height:${TR_H}px">
+    <svg width="${WW}" height="${TR_H}" viewBox="0 0 ${WW} ${TR_H}" overflow="visible">
+      <path d="${d}" class="tr-edge"/><path d="${d}" class="tr-road" id="trRoad"/><path d="${d}" class="tr-mid"/>
+      <path d="${d}" class="tr-blue" id="trBlue"/>${deco}${stops}${car}
+    </svg>
+    ${keys.map((k, i) => { const t = STASKS[k], up = i % 2 === 0; return `<button class="stop-tag tr-tag ${up ? "up" : "down"} ${RESULTS["s:" + k] ? "done" : ""}" type="button" data-pick="${k}" style="--c:${S_COLORS[k]};left:${stopX[i]}px;top:${(trailY(stopX[i]) + (up ? -40 : 40)).toFixed(0)}px"><span class="st-n">${RESULTS["s:" + k] ? "✓" : i + 1}</span><span class="st-t"><b>${esc(taskName(t))}</b><small>${esc(taskMeta(t).kind)} · ${taskMeta(t).time}</small></span></button>`; }).join("")}
+  </div>`;
+  // lengths along the road for each stop (binary search on x)
+  const road = $("trRoad"), total = road.getTotalLength();
+  const lenAtX = X => { let lo = 0, hi = total; for (let n = 0; n < 40; n++){ const mid = (lo + hi) / 2; road.getPointAtLength(mid).x < X ? lo = mid : hi = mid; } return lo; };
+  Object.assign(TR, { WW, total, road, stopLen: stopX.map(lenAtX), startLen: lenAtX(170), cur: null });
+}
+function placeTrail(instant){
+  const map = $("map"), keys = segKeys(), i = Math.max(0, keys.indexOf(segSel)), target = TR.stopLen[i];
+  $("mapTrail").querySelectorAll(".tr-tag").forEach(b => b.classList.toggle("sel", b.dataset.pick === segSel));
+  $("mapTrail").querySelectorAll(".tr-stop").forEach(g => g.classList.toggle("sel", g.dataset.k === segSel));
+  const blue = $("trBlue");
+  const frame = len => {
+    const p = TR.road.getPointAtLength(len), q = TR.road.getPointAtLength(Math.min(TR.total, len + 2));
+    const ang = Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI;
+    $("trCar").setAttribute("transform", `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
+    blue.style.strokeDasharray = `0 ${TR.startLen} ${Math.max(0, len - TR.startLen)} ${TR.total}`;
+    const W = map.clientWidth, H = map.clientHeight;
+    let sc, tx;
+    if (mapWide){ sc = Math.min(W / TR.WW, H / TR_H * 1.2); tx = (W - TR.WW * sc) / 2; }
+    else { sc = Math.max(.45, Math.min(.85, H / TR_H * .88)); tx = W * .4 - p.x * sc; }
+    const ty = H * .56 - TR_Y * sc;
+    $("trWorld").style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${sc.toFixed(3)})`;
+    TR.cur = len;
+  };
+  cancelAnimationFrame(TR.raf);
+  if (instant || TR.cur === null){ frame(target); return; }
+  const from = TR.cur, dist = Math.abs(target - from), dur = Math.min(1600, Math.max(500, dist * 1.1)), t0 = performance.now();
+  const ease = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+  const tick = now => { const k = Math.min(1, (now - t0) / dur); frame(from + (target - from) * ease(k)); if (k < 1) TR.raf = requestAnimationFrame(tick); };
+  TR.raf = requestAnimationFrame(tick);
+}
+
+/* =========================================================
+   SEGMENT 1 — the blue-line roadmap.
+   A bracket beside the title runs down through every task.
+   Pick a task: the blue line travels to it (a glowing head
+   leads the way) and the dot lights up when it arrives.
+   ========================================================= */
+var rmAnim;
+function rmState(){ return (rmAnim = rmAnim || { len: null, full: "", raf: 0 }); }
+function buildLine(){
+  const list = $("rmSteps"); if (!list) return;
+  list.innerHTML = segKeys().map((k, i) => {
+    const t = STASKS[k], best = RESULTS["s:" + k], m = taskMeta(t);
+    return `<li class="rm-step ${best ? "done" : ""}" style="--i:${i}">
+      <button type="button" data-pick="${k}">
+        <span class="rm-num">${i + 1}</span><span class="rm-dot"></span>
+        <span class="rm-txt"><b>${esc(taskName(t))}</b><small>${esc(m.kind)} · ${m.time}${best ? ` · <span class="rm-best">Best ${esc(best)}</span>` : ""}</small></span>
+      </button></li>`;
+  }).join("");
+  rmState().len = null;
+}
+function placeLine(instant){
+  document.querySelectorAll("#rmSteps .rm-step").forEach(li => { const on = li.querySelector("[data-pick]").dataset.pick === segSel; li.classList.toggle("sel", on); li.firstElementChild.setAttribute("aria-pressed", on); });
+  if (instant) rmState().len = null;
+  drawRoadmap();
+}
+function drawRoadmap(){
+  rmState();
+  const svg = $("rmLine"), nav = $("roadmap"); if (!svg || !nav.offsetParent) return;
+  const R = nav.getBoundingClientRect(), T = $("rmTitle").getBoundingClientRect();
+  const dots = [...nav.querySelectorAll(".rm-dot")].map(d => { const r = d.getBoundingClientRect(); return { x: Math.round(r.left + r.width/2 - R.left), y: Math.round(r.top + r.height/2 - R.top), r: d.offsetWidth/2 }; });
+  if (!dots.length) return;
+  const steps = [...nav.querySelectorAll(".rm-step")];
+  let sel = steps.findIndex(li => li.classList.contains("sel")); if (sel < 0) sel = 0;
+  const pad = parseFloat(getComputedStyle($("rmTitle")).paddingLeft) || 0;
+  const lx = dots[0].x, x0 = 3, r = 22, g = 5;
+  const y0 = Math.round(T.top - R.top + 20), y1 = Math.round(T.bottom - R.top + 24), sx = Math.round(T.left - R.left + pad - 8);
+  const bracket = `M${sx} ${y0} H${x0 + r} Q${x0} ${y0} ${x0} ${y0 + r} V${y1 - r} Q${x0} ${y1} ${x0 + r} ${y1} H${lx - r} Q${lx} ${y1} ${lx} ${y1 + r} V${dots[0].y - dots[0].r - g}`;
+  let full = bracket;
+  for (let i = 1; i < dots.length; i++) full += ` V${dots[i].y}`;
+  const last = dots[dots.length - 1];
+  svg.setAttribute("viewBox", `0 0 ${R.width} ${R.height}`);
+  if (!svg.querySelector(".blue")) svg.innerHTML = `<defs><linearGradient id="rmFade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9dce2"/><stop offset="1" stop-color="#d9dce2" stop-opacity="0"/></linearGradient></defs><path class="grey"/><path class="tail" stroke="url(#rmFade)"/><path class="blue"/><circle class="head" r="6"/>`;
+  const grey = svg.querySelector(".grey"), blue = svg.querySelector(".blue"), head = svg.querySelector(".head");
+  grey.setAttribute("d", full);
+  svg.querySelector(".tail").setAttribute("d", `M${lx} ${last.y} V${last.y + 70}`);
+  blue.setAttribute("d", full);
+  const probe = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  probe.setAttribute("d", bracket + dots.slice(1, sel + 1).map(d => ` V${d.y}`).join("") + (sel === 0 ? ` V${dots[0].y}` : "")); svg.appendChild(probe);
+  const total = blue.getTotalLength(), target = probe.getTotalLength(); probe.remove();
+  blue.style.strokeDasharray = `${total} ${total}`;
+  const set = len => { blue.style.strokeDashoffset = total - len; const p = blue.getPointAtLength(len); head.setAttribute("cx", p.x); head.setAttribute("cy", p.y); };
+  const arrive = () => { steps.forEach((li, i) => li.classList.toggle("lit", i === sel)); head.classList.remove("on"); };
+  cancelAnimationFrame(rmAnim.raf);
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (rmAnim.len === null || rmAnim.full !== full || reduced || Math.abs(target - rmAnim.len) < 1){
+    rmAnim.len = target; rmAnim.full = full; set(target); arrive(); return;
+  }
+  const from = rmAnim.len, dist = Math.abs(target - from), dur = Math.min(950, Math.max(420, dist * 2.6)), t0 = performance.now();
+  const ease = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+  steps.forEach(li => li.classList.remove("lit"));
+  head.classList.add("on");
+  const tick = now => {
+    const k = Math.min(1, (now - t0) / dur), cur = from + (target - from) * ease(k);
+    rmAnim.len = cur; set(cur);
+    if (k < 1) rmAnim.raf = requestAnimationFrame(tick); else arrive();
+  };
+  rmAnim.raf = requestAnimationFrame(tick);
+}
+
+/* =========================================================
+   FEEDBACK INTRO — when a score arrives, an analytics card plays
+   first (score counts up, the chart draws itself, best skill pops
+   a label), then it settles at the top and the detailed feedback
+   fades in underneath with plenty of room.
+   ========================================================= */
+var FX_HIST = {};   // every score per task this session, for "vs last try"
+(function(){
+  const out = $("sOut"); if (!out) return;
+  let lastCard = null, timer = 0;
+  new MutationObserver(() => {
+    const card = out.querySelector(":scope > .scorecard");
+    if (!card || card === lastCard || out.querySelector(":scope > .fx-hero")) return;
+    lastCard = card;
+    const num = card.querySelector(".ring-num"), m = num && num.textContent.match(/([\d.]+)\s*\/\s*([\d.]+)/); if (!m) return;
+    const total = +m[1], max = +m[2], pct = max ? Math.round(total / max * 100) : 0;
+    const hist = (FX_HIST[sCurrent] ||= []), prev = hist.length ? hist[hist.length - 1] : null; hist.push(pct);
+    const band = card.querySelector(".band")?.textContent || "";
+    const crits = [...card.querySelectorAll(".crit")].map(c => {
+      const name = c.querySelector(".name")?.textContent || "", sm = (c.querySelector(".sub")?.textContent || "").match(/([\d.]+|—)\s*\/\s*([\d.]+)/);
+      const v = sm && sm[1] !== "—" ? +sm[1] / +sm[2] : null;
+      return { name, v, label: sm ? `${sm[1]}/${sm[2]}` : "—" };
+    });
+    const delta = prev === null ? `First try on this task` : `${pct - prev >= 0 ? "+" : ""}${pct - prev}% vs your last try`;
+    const hero = document.createElement("section");
+    hero.className = "fx-hero";
+    hero.innerHTML = `<div class="fx-card" style="--n:${crits.length}">
+      <i class="fx-glow"></i><i class="fx-spark s1"></i><i class="fx-spark s2"></i><i class="fx-spark s3"></i>
+      <div class="fx-text">
+        <div class="fx-label">Your score · ${esc(taskName(STASKS[sCurrent]))}</div>
+        <div class="fx-num"><b data-to="${total}">0</b><small>/${max}</small></div>
+        <div class="fx-delta ${prev !== null && pct < prev ? "down" : ""}">${esc(delta)} · <span>${esc(band)}</span></div>
+      </div>
+      <div class="fx-chart">${fxChart(crits, pct)}</div>
+      <button class="fx-skip" type="button">Skip</button>
+    </div>`;
+    out.prepend(hero);
+    const dlg = out.closest(".fb-dialog");
+    const settle = () => { clearTimeout(timer); dlg.classList.remove("fx-intro"); dlg.classList.add("fx-done"); };
+    dlg.classList.remove("fx-done"); dlg.classList.add("fx-intro"); dlg.scrollTop = 0;
+    hero.querySelector(".fx-skip").onclick = settle;
+    fxPlay(hero, total);
+    timer = setTimeout(settle, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 3200);
+  }).observe(out, { childList: true });
+})();
+function fxChart(crits, pct = 70){
+  const W = 560, H = 220, top = 34, base = 180, n = Math.max(1, crits.length), cw = W / n;
+  const ys = crits.map(c => base - (c.v === null ? .04 : Math.max(.06, c.v)) * (base - top));
+  // step line: flat across each column, slanted between columns, arrow out of the last one
+  let d = "";
+  ys.forEach((y, i) => { const x0 = i * cw + 6, x1 = (i + 1) * cw - cw * .38; d += (i ? ` L${x0} ${y}` : `M0 ${y}`) + ` L${x1} ${y}`; });
+  const lastY = ys[ys.length - 1], endX = W - 8, endY = Math.min(base - 8, Math.max(10, lastY - 90 * (pct / 100 - .45)));   // arrow points up for a good score, down for a weak one
+  d += ` L${endX} ${endY}`;
+  const area = d + ` L${endX} ${base} L0 ${base} Z`;
+  const best = crits.reduce((b, c, i) => (c.v !== null && (b < 0 || c.v > crits[b].v)) ? i : b, -1);
+  const bx = best < 0 ? 0 : best * cw + cw * .31, by = best < 0 ? 0 : ys[best];
+  const ang = Math.atan2(endY - lastY, endX - ((n - 1) * cw + cw * .62)) * 180 / Math.PI;
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="fxArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9b3ff" stop-opacity=".42"/><stop offset="1" stop-color="#a9b3ff" stop-opacity="0"/></linearGradient>
+      <clipPath id="fxClip"><rect class="fx-wipe" x="0" y="0" width="0" height="${H}"/></clipPath></defs>
+    <g clip-path="url(#fxClip)"><path d="${area}" fill="url(#fxArea)"/>
+      ${crits.slice(1).map((c, i) => `<line x1="${(i + 1) * cw}" x2="${(i + 1) * cw}" y1="${Math.min(ys[i], ys[i + 1]) + 6}" y2="${base}" class="fx-sep"/>`).join("")}</g>
+    <path d="${d}" class="fx-line" pathLength="1"/>
+    <path d="M-12 -8 L0 0 L-12 8" class="fx-arrow" transform="translate(${endX} ${endY}) rotate(${ang.toFixed(1)})"/>
+    ${best >= 0 ? `<circle cx="${bx}" cy="${by}" r="6" class="fx-dot"/>` : ""}
+  </svg>
+  ${best >= 0 ? `<span class="fx-tip" style="left:${(bx / W * 100).toFixed(1)}%;top:${(by / H * 100).toFixed(1)}%">${esc(crits[best].name)} ${esc(crits[best].label)}</span>` : ""}
+  <div class="fx-axis">${crits.map(c => `<span>${esc(c.name)}</span>`).join("")}</div>`;
+}
+function fxPlay(hero, total){
+  const b = hero.querySelector(".fx-num b"), dec = String(total).includes(".") ? 1 : 0, t0 = performance.now() + 350, dur = 1500;
+  const tick = now => { const p = Math.min(1, Math.max(0, (now - t0) / dur)), e = 1 - Math.pow(1 - p, 3); b.textContent = (total * e).toFixed(dec); if (p < 1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+  requestAnimationFrame(() => hero.classList.add("play"));
+}
