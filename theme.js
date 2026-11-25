@@ -1,4 +1,4 @@
-/* Theme picker: 1 Classic · 2 Navy · 3 Blue & Black · 4 Sky · 5 Purple · 6 Green (Snigdha's picks) */
+/* Theme picker: 1 Sky · 2 Navy · 3 Blue & Black · 4 Classic · 5 Purple · 6 Green */
 (function(){
   const root = document.documentElement;
   function sync(){
