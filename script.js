@@ -346,10 +346,10 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 const STASKS = {
   read1:{
-    kind:"read", label:"Read aloud: First day",
-    text:`Ananya reached the institute gate at 8:45 on Monday morning. She held her admission papers close to her chest and looked around. A senior with a clipboard smiled and asked, "Are you looking for Room 12?" Ananya nodded. The senior walked with her past the notice board and the neem tree. By the time they reached the registration room, she was not nervous anymore.`,
-    sample:`Ananya reached the institute gate at 8:45 on Monday morning. She hold her admission paper close to her chest and looked around. A senior with a clipboard smiled and asked are you looking for room 12. Ananya nodded. The senior walk with her past the the notice board and the tree. By the time they reached the registration room she is not nervous anymore.`,
-    sampleSecs:31
+    kind:"read", label:"Read aloud: Library visit",
+    text:`Last Wednesday, Dr. Mehta walked down the street to the library near the station. She had read about a new photography book on a small island and wanted to remember its name. Three trees stood outside the old school. A vegetable seller with a very full basket of fruit sat on the wall. "Do you understand this form?" asked the librarian. Dr. Mehta wrote her name carefully, though her pen was half empty. She sat in a comfortable chair and listened to the rain for an hour. At 4:30 she took bus number 20 home, happy with her book.`,
+    sample:`Last Wednesday doctor Mehta walk down the street to the library near the station. She had read about a new photograph book on a small island and wanted to remember it name. Tree trees stood outside the old school. A vegetable seller with a very full basket of fruits sat on the wall. Do you understand this form asked the librarian. Doctor Mehta wrote her name carefully though her pen was half empty. She sat in a comfortable chair and listened to the rain for an hour. At 4:30 she took the bus number 20 home happy with her book.`,
+    sampleSecs:42
   },
   read2:{
     kind:"read", label:"Read aloud: Notice",
@@ -590,6 +590,7 @@ function tokenize(text){
     if (/^\d{1,2}:\d{2}$/.test(x)){ const [h,m] = x.split(":"); parts = (numWords(h) + " " + (m === "00" ? "" : numWords(+m))).trim().split(" "); }
     else if (/^\d+$/.test(x)) parts = numWords(x).split(" ");
     else if (CONTRACT[x]) parts = CONTRACT[x].split(" ");
+    else if (/^(dr|mr|mrs)$/.test(x)) parts = [{dr:"doctor", mr:"mister", mrs:"missus"}[x]];   // Dr. = doctor, however it was transcribed
     else if (/^(p|a)\.?m\.?$/.test(x)) parts = [x[0] + "m"];
     else if (COMPOUND[x]) parts = COMPOUND[x].split(" ");
     else parts = x.replace(/'s$/,"s").split(/[-]/).filter(Boolean);
@@ -647,7 +648,7 @@ function classifySub(rTok, hTok, refOrig){
   const r = rTok.w, h = hTok.w;
   const orig = refOrig[rTok.wi] || "";
   const prev = refOrig[rTok.wi-1] || ".";
-  if (/^[A-Z]/.test(orig) && !/[.!?"]$/.test(prev) && rTok.wi > 0) return {cls:"none", type:"Name said differently", why:"Names can be said in different ways. Not counted."};
+  if (/^[A-Z]/.test(orig) && (!/[.!?"]$/.test(prev) || /^(Dr|Mr|Mrs|Ms)\.$/.test(prev)) && rTok.wi > 0) return {cls:"none", type:"Name said differently", why:"Names can be said in different ways. Not counted."};
   for (const s of SUFFIX){ if (h + s === r) return {cls:"err", type:"Dropped a word ending", why:`The ending “-${s}” is missing, which changes the meaning (number or tense).`, meaning:true, pattern:"ending"}; }
   for (const s of SUFFIX){ if (r + s === h) return {cls:"err", type:"Added a word ending", why:`You added “-${s}” to the word.`, meaning:true, pattern:"ending"}; }
   if ((IRREG[r]||[]).includes(h)) return {cls:"err", type:"Changed the tense", why:"The verb is in a different tense from the text.", meaning:true, pattern:"tense"};
@@ -771,81 +772,169 @@ function patternOf(list){
 }
 
 function renderReadFeedback(R, t, transcript, timing, audioUrl, source){
-  const parts = [R.accScore, R.pace.score, R.phrasing.score];
-  const maxes = [4, 3, 3];
+  /* Results laid out like "Read aloud results – redesign mockup v2":
+     summary → your next step → tabs (reading / mistakes / habits) → teacher-only scoring details */
+  const parts = [R.accScore, R.pace.score, R.phrasing.score], maxes = [4, 3, 3];
   const measuredMax = maxes.reduce((a,m,i) => a + (parts[i]===null?0:m), 0);
   const total = parts.reduce((a,s) => a + (s||0), 0);
-  const ratio = total / measuredMax;
-  const band = ratio>=.9?["Excellent","var(--green-dot)","var(--green-soft)"]:ratio>=.7?["Good","var(--accent)","var(--accent-soft)"]:ratio>=.4?["Developing","var(--amber-dot)","var(--amber-soft)"]:["Beginning","var(--red-dot)","var(--red-soft)"];
+  const ratio = measuredMax ? total / measuredMax : 0;
+  const band = ratio>=.9?["Excellent","#12b76a"]:ratio>=.7?["Good","#1d4ed8"]:ratio>=.4?["Developing","#f79009"]:["Beginning","#d92d20"];
+  const plural = (n, w, p) => `${n} ${n===1 ? w : (p || w + "s")}`;
+  const fmtNum = x => Number.isInteger(x) ? x : x.toFixed(1);
+  const mistakes = R.weighted;
+  const pauses = timing.measured ? timing.pauses.filter(p=>p.dur<2).length : null;
+  const wordByWord = /word-by-word/.test(R.phrasing.reason);
 
-  const chips = [];
-  if (timing.speakSecs) chips.push(["", `Reading time: ${Math.round(timing.speakSecs)} s`]);
-  if (R.wcpm !== null) chips.push([R.wcpm<90?"mid":"", `${R.wcpm} correct words/min`]);
-  chips.push([R.accPct<85?"bad":R.accPct<93?"mid":"", `Accuracy ${Math.round(R.accPct)}%`]);
-  chips.push(["", source==="mic" ? "Transcript: speech recognition" : "Transcript: typed"]);
+  const crit = [["Accuracy", R.accScore, 4], ["Pace", R.pace.score, 3], ["Phrasing", R.phrasing.score, 3]];
+  let h = "";
 
-  let h = `<div class="checks">${chips.map(([c,m])=>`<span class="chk ${c}">${esc(m)}</span>`).join("")}</div>`;
-  h += `<div class="scorecard"><div class="score-head">${ringHTML(total, measuredMax, band[1])}
-        <div><div class="band">${band[0]}</div><div class="sub">${esc(t.label)} · ${R.errs.length} error${R.errs.length===1?"":"s"}, ${R.minors.length} minor</div></div></div>`;
-  const crit = [
-    ["Accuracy", R.accScore, 4, `${R.errs.length} error${R.errs.length===1?"":"s"} and ${R.minors.length} minor error${R.minors.length===1?"":"s"} (each minor error counts as ${R.minorW}) in ${R.refCount} words. ${Math.round(R.accPct)}% accurate.`],
-    ["Pace", R.pace.score, 3, R.pace.reason],
-    ["Phrasing", R.phrasing.score, 3, R.phrasing.reason + (R.phrasing.score!==null ? " (Estimated from pauses. Intonation isn't measured.)" : "")],
+  // ---------- 1. Summary ----------
+  const secs = timing.speakSecs ? Math.round(timing.speakSecs) : null;
+  const time = secs === null ? "" : secs >= 60 ? `${Math.floor(secs/60)} min ${secs%60} s` : `${secs} s`;
+  const how = [];
+  if (R.wcpm !== null && R.wcpm < 90) how.push("slowly"); else if (R.wpm !== null && R.wpm > 180) how.push("fast");
+  if (wordByWord) how.push("word by word");
+  const verdict = [`${plural(fmtNum(mistakes), "mistake")} in ${R.refCount} words`, how.length ? "read " + how.join(", ") : "", time].filter(Boolean).join(" · ");
+  const phraseShort = R.phrasing.score === null ? "Not measured" : wordByWord ? "Paused after most words"
+    : /broke up phrases/.test(R.phrasing.reason) ? "Some pauses broke up phrases"
+    : /without pausing/.test(R.phrasing.reason) ? "Read through commas and full stops" : "Paused at the punctuation";
+  const subs = [
+    ["Accuracy", R.accScore, 4, `${Math.round(R.accPct)}% of words correct`],
+    ["Pace", R.pace.score, 3, R.wcpm === null ? "Not measured" : `${R.wcpm} correct words a minute`],
+    ["Phrasing", R.phrasing.score, 3, phraseShort],
   ];
-  h += crit.map(([n,s,m,why]) => `<div class="crit"><div><div class="name">${n}</div><div class="bar">${Array.from({length:m},(_,k)=>`<span class="${s!==null&&k<s?"on":""}"></span>`).join("")}</div><div class="sub">${s===null?"—":s}/${m}</div></div><div>${esc(why)}</div></div>`).join("") + `</div>`;
+  const deg = Math.round(ratio * 360);
+  h += `<div class="rf">
+  <section class="rf-card rf-summary">
+    <div class="rf-ring" style="background:conic-gradient(${band[1]} 0 ${deg}deg,#eceef2 ${deg}deg 360deg)"><div>${total}<small>/${measuredMax}</small></div></div>
+    <div>
+      <div class="rf-band">${band[0]}</div>
+      <div class="rf-verdict">${esc(verdict)}</div>
+      <div class="rf-subs">${subs.map(([n,s,m,p]) => `<div class="rf-sub"><b>${n}</b><div class="rf-val">${s===null?"—":s} <span>/ ${m}</span></div><div class="rf-bar">${Array.from({length:m},(_,k)=>`<i class="${s!==null&&k<s?"on":""}"></i>`).join("")}</div><p>${esc(p)}</p></div>`).join("")}</div>
+      <div class="rf-how">Your score = ${subs.filter(x=>x[1]!==null).map(x=>`${x[0]} ${x[1]}`).join(" + ")} = <b>${total} / ${measuredMax}</b> · <button type="button" class="rf-howbtn">How is this worked out?</button></div>
+      <div class="rf-howbox"><b>Accuracy (up to 4)</b> goes up as more words are read correctly; a minor error counts as ${R.minorW === .5 ? "half" : R.minorW} a mistake. <b>Pace (up to 3)</b> goes up as you read more correct words a minute, up to a natural speaking speed. <b>Phrasing (up to 3)</b> goes up when you pause at commas and full stops, not between every word.</div>
+    </div>
+  </section>`;
 
-  // passage with marks
-  let n = 0; const numbered = new Map();
-  R.issues.filter(x => x.cls==="err"||x.cls==="minor").forEach(x => { if (!numbered.has(x)) numbered.set(x, ++n); });
+  // ---------- 2. Your next step ----------
+  const NOUN = {"Skipped a word":"skipped words","Stopped before the end":"words not reached at the end","Swapped for a similar word":"words read as a similar word",
+    "Changed the word":"words read as a different word","Added a word":"added words","Guessed from the first letter":"words guessed from the first letter",
+    "Dropped a word ending":"dropped word endings","Added a word ending":"added word endings","Changed the tense":"changes of tense","Changed the word order":"words read in the wrong order"};
+  const groupBy = arr => { const g = new Map(); arr.forEach(x => { if (!g.has(x.type)) g.set(x.type, []); g.get(x.type).push(x); }); return [...g.entries()].sort((a,b) => b[1].length - a[1].length); };
+  const errGroups = groupBy(R.errs);
+  const missedWords = [...new Set(R.errs.filter(x => x.expected).map(x => x.expected.replace(/[^\w'-]/g,"")))].sort((a,b) => b.length - a.length).slice(0,3);
+  const weakest = subs.filter(c => c[1] !== null).sort((a,b) => a[1]/a[2] - b[1]/b[2])[0];
+  let next;
+  if (!weakest || weakest[1] === weakest[2]) next = `<p><b>Great reading.</b> Try the other passage, or read this one again with more expression.</p>`;
+  else if (weakest[0] === "Accuracy"){
+    const top = errGroups.slice(0,2).map(([k,a]) => `<b>${esc(NOUN[k] || k.toLowerCase())} (${a.length})</b>`);
+    next = `<p>Get every word right first; speed will follow.${top.length ? ` Most of your mistakes were ${top.join(" and ")}.` : ""}</p><ol>
+      <li>Read the passage silently once.${missedWords.length ? ` Say the tricky words to yourself: <i>${missedWords.map(esc).join(", ")}</i>.` : ""}</li>
+      <li>Read it aloud slowly, pointing at each word, and finish every ending (<i>-s, -ed</i>).</li>
+      <li>When you can read it with no skips, read it again in short phrases, at the speed you'd tell a friend a story.</li></ol>`;
+  } else if (weakest[0] === "Pace"){
+    next = `<p>${esc(R.pace.reason)}</p><ol><li>Read the passage aloud 2–3 times.</li><li>Aim for the speed you'd use to tell a friend a story.</li><li>Keep every word correct as you speed up.</li></ol>`;
+  } else {
+    next = `<p>${esc(R.phrasing.reason)}</p><ol><li>Pause briefly at commas and a little longer at full stops.</li><li>Read words that belong together in one breath, in groups of 3–4 words.</li><li>Don't stop between every word.</li></ol>`;
+  }
+  h += `<div class="rf-next"><h3>Your next step</h3>${next}</div>`;
+
+  // ---------- 3. Tabs ----------
+  // tab 1: the passage, marked
   const byWord = {}; R.issues.forEach(x => { if (!x.ins && x.wi >= 0) (byWord[x.wi] ||= []).push(x); });
+  const WCLS = {err:"rf-e", minor:"rf-m", skip:"rf-s", unread:"rf-s", tip:"rf-t"};
+  const insHTML = ins => { const c = ins.cls==="err" ? "rf-a" : "rf-r"; const tip = ins.cls==="err" ? "Added" : ins.type; return `<span class="${c}" data-tip="${esc(tip)}" tabindex="0">+${esc(ins.w)}</span> `; };
   let passage = "";
   R.words.forEach((w, i) => {
-    (R.inserts[i]||[]).forEach(ins => { passage += `<span class="ins ${ins.cls==="note"?"note":ins.cls==="ok"?"ok":""}" data-pop="read" data-kind="${ins.cls==="note"?"note":ins.cls==="ok"?"ok":"ins"}" data-word="${esc(ins.w)}" data-items="${esc(JSON.stringify([{t:ins.type,s:""}]))}" tabindex="0">+${esc(ins.w)}</span> `; });
+    (R.inserts[i]||[]).forEach(ins => passage += insHTML(ins));
+    const c = WCLS[w.cls];
+    if (!c){ passage += esc(w.w) + " "; return; }
     const its = byWord[i] || [];
-    const tip = its.map(x => `${x.type}${x.said?`: you said “${x.said}”`:""}`).join("; ");
-    const num = its.map(x => numbered.get(x)).filter(Boolean)[0];
-    const cls = w.cls === "ok" ? "" : `rw r-${w.cls}`;
-    passage += cls ? `<span class="${cls}" data-pop="read" data-kind="${esc(w.cls)}" data-word="${esc(w.w)}" data-items="${esc(JSON.stringify(its.map(x => ({t:x.type, s:x.said||""}))))}" tabindex="0">${esc(w.w)}${num?`<sup>${num}</sup>`:""}</span> ` : esc(w.w) + " ";
+    const tip = w.cls === "skip" ? "Skipped" : w.cls === "unread" ? "Not read: stopped before the end"
+      : its.filter(x => x.said).map(x => (x.cls === "tip" ? "Sounded like: " : "You said: ") + x.said).join("; ") || (its[0] && its[0].type) || "";
+    passage += `<span class="${c}" data-tip="${esc(tip)}" tabindex="0">${esc(w.w)}</span> `;
   });
-  (R.inserts[R.words.length]||[]).forEach(ins => { passage += `<span class="ins ${ins.cls==="note"?"note":""}" data-pop="read" data-kind="${ins.cls==="note"?"note":"ins"}" data-word="${esc(ins.w)}" data-items="${esc(JSON.stringify([{t:ins.type,s:""}]))}" tabindex="0">+${esc(ins.w)}</span> `; });
-  h += `<div class="section"><h3>The passage, marked</h3><div class="answer-view" style="white-space:normal">${passage}</div>
-    <div class="legend"><span><span class="rw r-err">word</span> error</span><span><span class="rw r-minor">word</span> minor</span><span><span class="rw r-skip">word</span> skipped</span><span><span class="rw r-tip">word</span> pronunciation tip</span><span><span class="ins">+word</span> added</span><span><span class="ins note">+word</span> repeat or filler</span></div></div>`;
+  (R.inserts[R.words.length]||[]).forEach(ins => passage += insHTML(ins));
+  const tab1 = `<div class="rf-passage">${passage}</div>
+    <div class="rf-legend"><span><span class="rf-e">word</span> mistake</span>${R.minors.length?`<span><span class="rf-m">word</span> minor</span>`:""}<span><span class="rf-s">word</span> skipped</span><span><span class="rf-a">+word</span> added</span><span><span class="rf-t">word</span> pronunciation tip</span><span><span class="rf-r">+word</span> repeated</span><span>Hover or tap a word to see what you said</span></div>
+    ${audioUrl ? `<div class="rf-audio"><audio controls src="${audioUrl}"></audio><span>Your recording</span></div>` : ""}`;
 
-  const list = (title, arr, numberedList) => arr.length ? `<div class="section"><h3>${title} (${arr.length})</h3>${arr.map(x => `
-     <div class="err ${x.cls==="err"?"serious":""}"><div class="n ${x.cls==="tip"||x.cls==="note"||x.cls==="ok"||x.cls==="none"?"info":""}">${numberedList ? (numbered.get(x)||"•") : "•"}</div><div>
-       <span class="tag">${esc(x.type)}</span>${x.meaning?`<span class="tag mean">changes meaning</span>`:""}<br>
-       ${x.said && x.expected ? `You said <s>${esc(x.said)}</s> for <span class="fix">${esc(x.expected)}</span>` : x.expected ? `<span class="fix">${esc(x.expected)}</span> was not read` : x.said ? `You said “${esc(x.said)}”` : ""}
-       <div class="sub">${esc(x.why)}</div></div></div>`).join("")}</div>` : "";
-  const trailing = R.errs.filter(x => x.type==="Stopped before the end");
-  const errsShown = R.errs.filter(x => x.type!=="Stopped before the end");
-  h += list("Errors", errsShown, true);
-  if (trailing.length) h += `<div class="callout warn"><b>Stopped before the end:</b> ${trailing.length} word${trailing.length>1?"s":""} at the end were not read and count as skipped.</div>`;
-  h += list("Minor errors", R.minors, true);
-  h += list("Pronunciation tips (not counted)", R.issues.filter(x=>x.cls==="tip"), false);
-  h += list("Noted, not counted", R.issues.filter(x=>x.cls==="note"||x.cls==="ok"||x.cls==="none"), false);
+  // tab 2: mistakes grouped by how much they count
+  const TIP = {"Skipped a word":"Point at each word as you read","Guessed from the first letter":"Look at the whole word before you say it",
+    "Dropped a word ending":"Finish every -s and -ed","Added a word":"Words you said that aren't in the text"};
+  const LISTONLY = new Set(["Skipped a word","Stopped before the end"]);
+  const detail = (k, a) => k === "Stopped before the end" && a.length > 5 ? `<span class="rf-w">Everything from “${esc(R.words[a[0].wi].w)} ${esc((R.words[a[0].wi+1]||{w:""}).w)}…” to the end</span>`
+    : LISTONLY.has(k) ? `<span class="rf-w">${a.map(x => esc(x.expected)).join(", ")}</span>`
+    : a.every(x => x.ins) ? `<span class="rf-q">${a.map(x => `“${esc(x.said)}”`).join(", ")}</span>`
+    : a.map(x => `<span class="rf-pair"><del>${esc(x.said||"")}</del> → <ins>${esc(x.expected||"")}</ins></span>`).join("");
+  const rows = groups => groups.map(([k,a]) => `<tr><td><b>${esc(k === "Pronunciation tip" ? "Sounded like another word" : k)}</b>${TIP[k]?`<div class="rf-tip">${TIP[k]}</div>`:""}${k==="Pronunciation tip"?`<div class="rf-tip">Listeners still understood you, so these don't count</div>`:""}</td><td>${detail(k,a)}</td><td class="rf-num">${a.length}</td></tr>`).join("");
+  const tips = R.issues.filter(x => x.cls==="tip");
+  const minorW = R.minorW === .5 ? "½" : R.minorW;
+  const tab2 = `<table class="rf-table"><thead><tr><th>Mistake</th><th>You said → the text says</th><th class="r">Times</th></tr></thead><tbody>
+    <tr class="rf-sec"><td colspan="3">Errors <span class="rf-pill p-err">Count as 1 each</span></td></tr>
+    ${R.errs.length ? rows(errGroups) : `<tr><td colspan="2" class="rf-empty">No errors in this reading.</td><td class="rf-num">0</td></tr>`}
+    <tr class="rf-sec"><td colspan="3">Minor errors <span class="rf-pill p-min">Count as ${minorW} each</span></td></tr>
+    ${R.minors.length ? rows(groupBy(R.minors)) : `<tr><td colspan="2" class="rf-empty">None in this reading. Minor errors show here, e.g. “a” for “the”, a word that means the same, or saying the punctuation.</td><td class="rf-num">0</td></tr>`}
+    <tr class="rf-sec"><td colspan="3">Pronunciation tips <span class="rf-pill p-tip">Not counted</span></td></tr>
+    ${tips.length ? rows(groupBy(tips)) : `<tr><td colspan="2" class="rf-empty">None in this reading.</td><td class="rf-num">0</td></tr>`}
+    </tbody><tfoot><tr><td colspan="2">For your accuracy score: ${R.errs.length} errors + ${R.minors.length} minor (×${minorW}) = ${fmtNum(mistakes)} mistakes in ${R.refCount} words → ${Math.round(R.accPct)}% correct</td><td class="rf-num">${fmtNum(mistakes)}</td></tr></tfoot></table>`;
 
-  const pat = patternOf(R.errs.concat(R.minors, R.issues.filter(x=>x.cls==="tip")));
-  if (pat) h += `<div class="callout pattern"><b>Repeated mistake:</b> ${esc(pat)}</div>`;
-  const weakest = crit.filter(c => c[1] !== null).sort((a,b) => a[1]/a[2] - b[1]/b[2])[0];
-  const NEXT = {Accuracy:"Read the passage once silently, then aloud, pointing at each word. Pay attention to the word endings.",
-    Pace:"Read it again aloud 2–3 times. Aim for the speed you would use to tell a friend a story.",
-    Phrasing:"Pause briefly at commas and a little longer at full stops. Read words that belong together in one breath."};
-  h += weakest[1] === weakest[2] ? `<div class="callout next"><b>Great reading.</b> Try the other passage, or read this one with more expression.</div>` : `<div class="callout next"><b>Your next step (${weakest[0]}):</b> ${NEXT[weakest[0]]}</div>`;
+  // tab 3: reading habits (not word mistakes)
+  const notes = R.issues.filter(x => x.cls==="note" || x.cls==="ok" || x.cls==="none");
+  const habits = [];
+  if (wordByWord) habits.push(["Word-by-word reading", "You paused after most words. Try reading in groups of 3–4 words.", "Phrasing"]);
+  else if (R.phrasing.score !== null && R.phrasing.score < 3) habits.push(["Pauses", R.phrasing.reason, "Phrasing"]);
+  if (R.wcpm !== null && R.wcpm < 90) habits.push(["Slow reading", `${R.wcpm} correct words a minute. Aim for the speed you'd use to tell a friend a story.`, "Pace"]);
+  else if (R.wpm !== null && R.wpm > 180) habits.push(["Fast reading", `${R.wpm} words a minute. Slow down so each word is clear.`, "Pace"]);
+  const said = type => [...new Set(notes.filter(x => x.type===type).map(x => `“${x.said}”`))];
+  const rep = said("Repeated a word"); if (rep.length) habits.push(["Repeated words", `${rep.join(", ")}: going back to re-read is fine, it isn't counted.`, "Not counted"]);
+  const fil = said("Filler"); if (fil.length) habits.push(["Fillers", `${fil.join(", ")}: try a silent pause instead.`, "Not counted"]);
+  const fix = notes.filter(x => x.type==="Corrected yourself").length; if (fix) habits.push(["Corrected yourself", `You fixed a word straight away ${plural(fix,"time")}. Good habit.`, "Not counted"]);
+  if (timing.longPauses) habits.push(["Long pauses", `You stopped for 2 seconds or more, ${plural(timing.longPauses,"time")}.`, "Not counted"]);
+  if (notes.some(x => x.type==="Skipped a line")) habits.push(["Skipped a line", "Several words in a row were skipped, as if a line was missed. Each word counts as skipped.", "Accuracy"]);
+  const names = notes.filter(x => x.type==="Name said differently").length; if (names) habits.push(["Names", `${plural(names,"name")} said differently. Names can be said in different ways.`, "Not counted"]);
+  const tab3 = habits.length ? `<table class="rf-table"><thead><tr><th>What we noticed</th><th>Detail</th><th>Affects</th></tr></thead><tbody>
+    ${habits.map(([a,b,c]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td><td><span class="rf-pill p-note">${esc(c)}</span></td></tr>`).join("")}</tbody></table>`
+    : `<p class="rf-empty">Nothing to note: no repeats, fillers or long pauses.</p>`;
 
-  if (audioUrl) h += `<div class="section"><h3>Your recording</h3><audio controls src="${audioUrl}"></audio></div>`;
-  h += `<div class="section"><details><summary>What the speech engine heard</summary><div class="improved" style="margin-top:8px">${esc(transcript)}</div>
-    <div class="sub" style="margin-top:6px">Speech recognition sometimes “fixes” small mistakes, such as a dropped “-s”, so some errors may be missed. It can also mishear a clear word.</div></details></div>`;
-  h += `<details class="section settings"><summary>How this was scored</summary><table class="metrics">
-    <tr><td>Words in passage / words heard</td><td>${R.refCount} / ${R.hypCount}</td></tr>
-    <tr><td>Read correctly</td><td>${R.correct}</td></tr>
-    <tr><td>Errors / minor errors (weight)</td><td>${R.errs.length} / ${R.minors.length} (×${R.minorW})</td></tr>
-    <tr><td>Accuracy</td><td>${Math.round(R.accPct)}%  →  97% = 4, 93% = 3, 85% = 2, 70% = 1</td></tr>
-    <tr><td>Correct words / words per minute</td><td>${R.wcpm ?? "—"} / ${R.wpm ?? "—"}</td></tr>
-    <tr><td>Pace bands</td><td>3: ≥110 correct and ≤180 total words/min</td></tr>
-    <tr><td>Pauses (0.4–2 s) / long hesitations (≥2 s)</td><td>${timing.measured ? timing.pauses.filter(p=>p.dur<2).length + " / " + timing.longPauses : "—"}</td></tr></table>
-    <p>The thresholds are first guesses. Agree them with the language expert, as listed at the end of the Read-Aloud Scoring Rules.</p></details>`;
+  const nMist = R.errs.length + R.minors.length;
+  h += `<section class="rf-card">
+    <div class="rf-tabs" role="tablist">
+      <button type="button" class="rf-tab on" data-rf="1" role="tab">Your reading</button>
+      <button type="button" class="rf-tab" data-rf="2" role="tab">Mistakes<span class="rf-n">${nMist}</span></button>
+      <button type="button" class="rf-tab" data-rf="3" role="tab">Reading habits<span class="rf-n g">${habits.length}</span></button>
+    </div>
+    <div class="rf-panel on" data-rfp="1">${tab1}</div>
+    <div class="rf-panel" data-rfp="2">${tab2}</div>
+    <div class="rf-panel" data-rfp="3">${tab3}</div>
+  </section>`;
+
+  // ---------- 4. Teacher / admin only ----------
+  h += `<details class="rf-admin"><summary>Scoring details <span class="rf-tag">Teacher / admin only · hidden from learners</span></summary>
+    <div class="rf-kv">
+      <span>Words in passage / words heard</span><b>${R.refCount} / ${R.hypCount}</b>
+      <span>Read correctly</span><b>${R.correct}</b>
+      <span>Errors / minor errors (weight)</span><b>${R.errs.length} / ${R.minors.length} (×${R.minorW})</b>
+      <span>Accuracy bands</span><b>97% = 4 · 93% = 3 · 85% = 2 · 70% = 1</b>
+      <span>Correct words / words per minute</span><b>${R.wcpm ?? "—"} / ${R.wpm ?? "—"}</b>
+      <span>Pace band 3</span><b>≥110 correct and ≤180 total words/min</b>
+      <span>Pauses (0.4–2 s) / long hesitations (≥2 s)</span><b>${pauses === null ? "—" : pauses + " / " + timing.longPauses}</b>
+      <span>Transcript</span><b>${source==="mic" ? "Speech recognition" : "Typed"}</b>
+    </div>
+    <p class="rf-muted"><b>What the speech engine heard:</b> ${esc(transcript)}</p>
+    <p class="rf-muted">Speech recognition sometimes “fixes” small mistakes, such as a dropped “-s”, so some errors may be missed. The thresholds are first guesses, to agree with the language expert.</p>
+  </details>
+  </div>`;
   $("sOut").innerHTML = h;
 }
+document.addEventListener("click", e => {
+  const tab = e.target.closest(".rf-tab");
+  if (tab){ const card = tab.closest(".rf-card");
+    card.querySelectorAll(".rf-tab").forEach(x => x.classList.toggle("on", x === tab));
+    card.querySelectorAll(".rf-panel").forEach(p => p.classList.toggle("on", p.dataset.rfp === tab.dataset.rf)); return; }
+  const hb = e.target.closest(".rf-howbtn");
+  if (hb) hb.closest(".rf-summary").querySelector(".rf-howbox").classList.toggle("on");
+});
 
 /* =========================================================
    SPOKEN ANSWER SCORING (self-intro, answer a question)
@@ -1104,8 +1193,6 @@ function renderCutout(){
 var SEG_TASKS = ["read1", "read2", "intro", "answer"];
 var SEGMENTS = [
   { name: "Roadmap", style: "line", tasks: SEG_TASKS },
-  { name: "City map", style: "town", tasks: SEG_TASKS },
-  { name: "Road trip", style: "trail", tasks: SEG_TASKS },
 ];
 var segCur = 0, segSel = null, mapWide = false;
 function segOf(k){ return segCur || 0; }   // every segment has the same tasks: stay on the one in view
@@ -1204,7 +1291,7 @@ function renderSegment(instant = true){
   const keys = segKeys();
   if (!keys.includes(segSel)) segSel = segNext() || keys[0];
   $("mapTitle").textContent = SEGMENTS[segCur].name;
-  $("mapCrumb").textContent = `Communication skills · Segment ${segCur + 1}`;
+  $("mapCrumb").textContent = "Communication Skills";
   const style = SEGMENTS[segCur].style;
   $("map").classList.toggle("is-trail", style === "trail");
   $("map").classList.toggle("is-line", style === "line");
@@ -1215,10 +1302,7 @@ function renderSegment(instant = true){
   requestAnimationFrame(() => placeMap(instant));
 }
 function renderSegTabs(){
-  $("mapSegs").innerHTML = SEGMENTS.map((sg, i) => {
-    const done = sg.tasks.filter(k => RESULTS["s:" + k]).length;
-    return `<button type="button" class="${i === segCur ? "on" : ""}" data-seg="${i}"><b>Segment ${i + 1}</b><span>${esc(sg.name)} · ${done}/${sg.tasks.length}</span></button>`;
-  }).join("");
+  $("mapSegs").innerHTML = `SEGMENT ${segCur + 1}`;   // single segment: plain greyed-out label instead of tabs
 }
 function pickStop(k){
   if (!k || k === segSel) return;
@@ -1243,7 +1327,7 @@ function renderOverview(k){
   const box = $("overview"); if (!box) return;
   const keys = SEGMENTS[segOf(k)].tasks, t = STASKS[k], m = taskMeta(t), i = keys.indexOf(k), best = RESULTS["s:" + k];
   const status = best ? `<span class="ov-pill done">Done · best ${esc(best)}</span>` : "";
-  const SHORT = { read1: "Read a short story out loud.", read2: "Read a college notice out loud.",
+  const SHORT = { read1: "Read a short story about a library visit out loud.", read2: "Read a college notice out loud.",
                   intro: "Introduce yourself to your new classmates.", answer: "Talk about your first day at college.",
                   read3: "Read the library rules out loud.", read4: "Read a phone message out loud.",
                   weekend: "Tell us about your last weekend.", help: "Ask a senior the way to the canteen.",
@@ -1261,11 +1345,11 @@ function renderOverview(k){
   ];
   box.innerHTML = `<div class="ov-in">
     <div class="ov-main">
-      <div class="ov-top"><span class="ov-step">Segment ${segOf(k) + 1} · Stop ${i + 1} of ${keys.length}</span>${status}</div>
+      <div class="ov-top">${status}</div>
       <h3 class="ov-title">${esc(taskName(t)).replace(/-/g, "\u2011")}</h3>
       <div class="ov-body">${body}</div>
       <div class="ov-stats">${stats.map(([v, l]) => `<div><b>${esc(String(v))}</b><span>${esc(l)}</span></div>`).join("")}</div>
-      <div class="ov-foot"><button class="ov-go" type="button" data-open="${k}">${best ? "Practise again" : "Start task"}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+      <div class="ov-foot"><button class="ov-go" type="button" data-open="${k}">${best ? "Practise again" : "Start"}</button></div>
     </div>
     <div class="ov-art" aria-hidden="true"><i class="ov-ring r1"></i><i class="ov-ring r2"></i><span class="ov-ico" data-k="${k}"><i class="ico"></i></span></div>
   </div>`;
@@ -1495,6 +1579,7 @@ function drawRoadmap(){
    ========================================================= */
 var FX_HIST = {};   // every score per task this session, for "vs last try"
 (function(){
+  return;   // animated score card with the graph: turned off
   const out = $("sOut"); if (!out) return;
   let lastCard = null, timer = 0;
   new MutationObserver(() => {

@@ -8,9 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&family=Lexend:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Chakra+Petch:wght@600&display=swap" rel="stylesheet">
 <script>/* theme before first paint: ?theme=classic|navy|brand|sky|purple|green (or 1-6), else last choice, else navy */
 (function(){var L=["sky","navy","brand","classic","purple","green"],q=(location.search.match(/[?&]theme=([a-z0-9]+)/)||[])[1],t;try{t=q||localStorage.getItem("speak-theme")}catch(e){t=q}if(t==="new")t="navy";if(t==="snigdha")t="sky";if(/^[1-6]$/.test(t||""))t=L[t-1];if(L.indexOf(t)<0)t="navy";var h=document.documentElement;h.dataset.theme=t;h.classList.toggle("lm",t!=="classic");})();</script>
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="theme-new.css">
-<link rel="stylesheet" href="transition.css">
+<link rel="stylesheet" href="style.css?v=20261126l">
+<link rel="stylesheet" href="theme-new.css?v=20261126l">
+<!-- <link rel="stylesheet" href="transition.css"> -->
 </head>
 <body>
 <div class="splash" id="splash" aria-hidden="true">
@@ -34,7 +34,7 @@
   <!-- Task open: the tool name drops into a cut-out hanging from the bar -->
   <div class="cutout" id="cutout" aria-live="polite">
     <small id="cutMeta">Read aloud</small>
-    <b><span class="cut-ico" id="cutIco"><i class="ico"></i></span><span id="cutName">First day</span></b>
+    <b><span class="cut-ico" id="cutIco"><i class="ico"></i></span><span id="cutName">Library visit</span></b>
   </div>
   <div class="tools">
     <div class="theme-switch" role="group" aria-label="Theme"><button type="button" data-theme-set="sky" aria-pressed="false" title="Snigdha's pick: sky/700" style="--sw:#11577E"><b>1</b><span>Sky</span></button><button type="button" data-theme-set="navy" aria-pressed="false" title="Near-black navy frame and buttons" style="--sw:#0E1A40"><b>2</b><span>Navy</span></button><button type="button" data-theme-set="brand" aria-pressed="false" title="Figma Brand &amp; CTA: blue and black" style="--sw:#2B4FD8"><b>3</b><span>Blue &amp; Black</span></button><button type="button" data-theme-set="classic" aria-pressed="false" title="Original look" style="--sw:#2b2b2e"><b>4</b><span>Classic</span></button><button type="button" data-theme-set="purple" aria-pressed="false" title="Snigdha's pick: purple/600" style="--sw:#8A4FB0"><b>5</b><span>Purple</span></button><button type="button" data-theme-set="green" aria-pressed="false" title="Snigdha's pick: green/700" style="--sw:#136C3E"><b>6</b><span>Green</span></button></div>
@@ -64,9 +64,9 @@
         <ol class="rm-steps" id="rmSteps"></ol>
       </nav>
       <div class="map-head">
-        <div class="crumb" id="mapCrumb">Communication skills · Segment 1</div>
+        <div class="crumb" id="mapCrumb">Communication Skills</div>
         <h2 id="mapTitle">First week</h2>
-        <div class="map-segs" id="mapSegs" role="tablist" aria-label="Segments"></div>
+        <div class="map-segs" id="mapSegs" role="heading" aria-level="2"></div>
       </div>
       <div class="map-tools">
         <button class="map-btn" id="mapWide" type="button" title="See the whole route" aria-label="See the whole route"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button>
@@ -88,7 +88,7 @@
   </aside>
 
   <section class="pane editor card">
-    <div class="pane-head"><button class="fb-open" id="fbOpen" type="button">View feedback</button><div class="crumb">Communication skills · Speaking</div><h2 id="sTitle">Read aloud</h2></div>
+    <div class="pane-head"><button class="fb-open" id="fbOpen" type="button">View feedback</button><div class="crumb">Communication Skills · Speaking</div><h2 id="sTitle">Read aloud</h2></div>
     <div class="pane-body">
       <div id="sPromptBox"></div>
 
@@ -138,7 +138,7 @@
     <div class="type-head"><div><div class="crumb">No microphone?</div><h3 id="typeTitle">Type what was said</h3></div>
       <button class="fb-close" id="typeClose" type="button" aria-label="Close">×</button></div>
     <label>Transcript (exactly what the learner said)
-      <textarea id="manualText" placeholder="e.g. Ananya reached the institute gate at eight forty five…"></textarea></label>
+      <textarea id="manualText" placeholder="e.g. Last Wednesday, Dr. Mehta walked down the street…"></textarea></label>
     <label>Time taken in seconds (optional, needed to score pace)
       <input id="manualSecs" type="number" min="0" placeholder="e.g. 32"></label>
     <div class="type-actions"><button class="ghost" id="manualSample" type="button">Fill a sample</button><button class="primary" id="manualGo" type="button">Score transcript</button></div>
@@ -177,10 +177,10 @@
   </div>
 </div>
 
-<script src="script.js"></script>
-<script src="motion.js"></script>
-<script src="notch.js"></script>
-<script src="theme.js"></script>
-<script src="transition.js"></script>
+<script src="script.js?v=20261126l"></script>
+<script src="motion.js?v=20261126l"></script>
+<script src="notch.js?v=20261126l"></script>
+<script src="theme.js?v=20261126l"></script>
+<!-- screen transition removed: <script src="transition.js"></script> -->
 </body>
 </html>
