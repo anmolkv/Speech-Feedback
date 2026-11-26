@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>/* show the tool through frame.html (fits every screen like the Mac layout); ?noframe opens it directly */
+(function(){var q=location.search;if(/[?&]embed=1/.test(q)){document.documentElement.classList.add("embed");return;}
+if(window.top===window.self&&!/[?&]noframe/.test(q))location.replace("frame.html"+q+location.hash);})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <title>Speak Feedback</title>
@@ -10,6 +13,7 @@
 (function(){var L=["sky","navy","brand","classic","purple","green"],q=(location.search.match(/[?&]theme=([a-z0-9]+)/)||[])[1],t;try{t=q||localStorage.getItem("speak-theme")}catch(e){t=q}if(t==="new")t="navy";if(t==="snigdha")t="sky";if(/^[1-6]$/.test(t||""))t=L[t-1];if(L.indexOf(t)<0)t="navy";var h=document.documentElement;h.dataset.theme=t;h.classList.toggle("lm",t!=="classic");})();</script>
 <link rel="stylesheet" href="style.css?v=20261126l">
 <link rel="stylesheet" href="theme-new.css?v=20261126l">
+<link rel="stylesheet" href="fit-inside.css?v=20261126f">
 <!-- <link rel="stylesheet" href="transition.css"> -->
 </head>
 <body>
@@ -182,5 +186,6 @@
 <script src="notch.js?v=20261126l"></script>
 <script src="theme.js?v=20261126l"></script>
 <!-- screen transition removed: <script src="transition.js"></script> -->
+<script src="fit-inside.js?v=20261126f"></script>
 </body>
 </html>

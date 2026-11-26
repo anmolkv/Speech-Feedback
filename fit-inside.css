@@ -1,0 +1,27 @@
+/* =========================================================
+   fit-inside.css — used when the tool runs inside frame.html
+   (html.embed). Nothing scrolls: no scrollbars anywhere;
+   long content is fitted or paged instead (fit-inside.js).
+   ========================================================= */
+html.embed,html.embed body{overflow:hidden !important;height:100%;overscroll-behavior:none}
+html.embed *{scrollbar-width:none !important}
+html.embed *::-webkit-scrollbar{display:none !important;width:0;height:0}
+
+/* feedback pop-up: shown one page at a time, with Back / Next */
+html.embed .fb-dialog,html.embed .fb-dialog .pane-body{overflow:hidden !important}
+html.embed .fb-dialog .pane-body{flex:1;min-height:0;display:flex;flex-direction:column}
+html.embed .fb-paged{display:block !important;flex:1;min-height:0;overflow:hidden}
+html.embed .fb-paged > *{margin-top:0 !important;margin-bottom:18px !important;position:static !important}
+html.embed .fb-paged > .pg-hide{display:none !important}
+html.embed .fb-paged > .pg-in{animation:pgIn .35s cubic-bezier(.2,.8,.2,1) both}
+@keyframes pgIn{from{opacity:0;transform:translateX(var(--pg-dx,24px))}}
+.fb-pager{flex:none;display:none;align-items:center;justify-content:space-between;gap:12px;padding:12px 32px 18px;border-top:1px solid var(--line,#e3e6eb)}
+.fb-pager.on{display:flex}
+.fb-pager button{border:0;border-radius:999px;padding:10px 18px;font:600 14px var(--font,inherit);cursor:pointer;background:var(--soft,#eef0f4);color:var(--ink,#111)}
+.fb-pager button.next{background:var(--ink,#111);color:#fff}
+.fb-pager button:disabled{opacity:.35;cursor:default}
+.fb-pager .dots{display:flex;align-items:center;gap:8px;font:600 13px var(--font,inherit);color:var(--muted,#6a7080)}
+.fb-pager .dots i{width:8px;height:8px;border-radius:50%;background:var(--line,#d9dce2);transition:background .2s,transform .2s}
+.fb-pager .dots i.on{background:var(--ink,#111);transform:scale(1.25)}
+/* the live transcript keeps its newest words in view */
+html.embed .live{overflow:hidden !important}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Feedback</title>
+<!--
+  frame.html — shows the tool exactly like the Mac layout on every screen.
+  The tool runs inside a fixed 1440-wide stage (height follows the screen's shape, 760–1000),
+  and the whole stage is scaled to fit the window, like a slide. Nothing on the page scrolls.
+  Upright phones are asked to turn sideways. Open index.html?noframe to see the tool without it.
+-->
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#0E1A40;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+  body{position:fixed;inset:0;touch-action:manipulation;transition:background-color .3s}
+  #stage{position:absolute;left:0;top:0;border:0;display:block;transform-origin:0 0;background:transparent;visibility:hidden}
+  #rotate{position:fixed;inset:0;display:none;place-items:center;text-align:center;padding:32px;color:#fff;
+    font:600 18px/1.4 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  #rotate svg{width:92px;height:92px;margin:0 auto 18px;display:block;animation:turn 2.4s ease-in-out infinite}
+  #rotate small{display:block;margin-top:8px;font-weight:500;font-size:14px;opacity:.7}
+  @keyframes turn{0%,20%{transform:rotate(0)}50%,70%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+  @media (prefers-reduced-motion:reduce){#rotate svg{animation:none}}
+</style>
+</head>
+<body>
+<iframe id="stage" title="Practice tool" allow="microphone; clipboard-write; autoplay"></iframe>
+<div id="rotate" role="alert"><div>
+  <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="5" width="20" height="38" rx="4"/><path d="M21 37h6"/></svg>
+  Turn your phone sideways
+  <small>This practice space is made for a wide screen.</small>
+</div></div>
+<script>
+(function(){
+  var W = 1440, HMIN = 760, HMAX = 1000;
+  var f = document.getElementById("stage"), rot = document.getElementById("rotate");
+  var q = location.search.replace(/^\?/, "");
+  f.src = "index.html?embed=1" + (q ? "&" + q : "") + location.hash;
+  var lastW = 0, lastH = 0;
+  function fit(){
+    var vw = window.innerWidth, vh = window.innerHeight;
+    // on-screen keyboard: the width stays, only the height shrinks — keep the stage as it is
+    try { var a = f.contentDocument && f.contentDocument.activeElement;
+      if (a && /^(TEXTAREA|INPUT)$/.test(a.tagName) && vw === lastW && vh < lastH * 0.8) return; } catch(e){}
+    lastW = vw; lastH = vh;
+    var upright = vh > vw && vw < 600;
+    rot.style.display = upright ? "grid" : "none";
+    f.style.visibility = upright ? "hidden" : "visible";
+    var H = Math.round(Math.min(HMAX, Math.max(HMIN, W * vh / vw)));
+    var s = Math.min(vw / W, vh / H);
+    f.style.width = W + "px"; f.style.height = H + "px";
+    f.style.transform = "translate(" + ((vw - W * s) / 2) + "px," + ((vh - H * s) / 2) + "px) scale(" + s + ")";
+  }
+  function syncBg(){
+    try { var d = f.contentDocument, c = getComputedStyle(d.body).backgroundColor;
+      if (!c || c === "rgba(0, 0, 0, 0)" || c === "transparent") c = getComputedStyle(d.documentElement).getPropertyValue("--frame").trim() || "#0E1A40";
+      document.body.style.backgroundColor = c; } catch(e){}
+  }
+  f.addEventListener("load", function(){
+    try {
+      document.title = f.contentDocument.title || document.title;
+      syncBg();
+      new MutationObserver(syncBg).observe(f.contentDocument.documentElement, { attributes: true, attributeFilter: ["data-theme", "class"] });
+      f.contentWindow.focus();
+    } catch(e){}
+    fit();
+  });
+  window.addEventListener("resize", fit);
+  window.addEventListener("orientationchange", function(){ setTimeout(fit, 250); });
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", fit);
+  document.addEventListener("pointerdown", function(){ try { f.contentWindow.focus(); } catch(e){} });
+  fit();
+})();
+</script>
+</body>
+</html>
